@@ -1,0 +1,372 @@
+// Transit Guard demo seed — all data is synthetic. Fast Insights is fictional.
+// Demo "today" is December 30, 2026 (two days before the FY2026 balance-sheet date),
+// matching the Inventory Close Guard suite narrative.
+
+export const DEMO_TODAY = '2026-12-30'
+
+export type LegKind =
+  | 'pick'
+  | 'outbound'
+  | 'truck'
+  | 'boatyard'
+  | 'ocean'
+  | 'air'
+  | 'port'
+  | 'customs'
+  | 'courier'
+  | 'delivery'
+
+export type LegStatus = 'complete' | 'active' | 'pending'
+
+export interface LegDoc {
+  name: string
+  ready: boolean
+}
+
+export interface Leg {
+  id: string
+  kind: LegKind
+  vendor: string
+  location: string
+  /** ISO date the hand-off happened; null while pending */
+  date: string | null
+  eta?: string
+  status: LegStatus
+  docs: LegDoc[]
+  note?: string
+}
+
+export type Direction = 'outbound' | 'rma' | 'internal'
+
+export interface Shipment {
+  txId: string
+  direction: Direction
+  product: string
+  unitCount: number
+  serialsSample: string[]
+  customer: string
+  destination: string
+  country: 'US' | 'NL' | 'CA'
+  incoterms?: string
+  salesValue: number
+  customsValue?: number
+  invoice?: { id: string; date: string }
+  linkedTo?: string
+  legs: Leg[]
+}
+
+export interface Flag {
+  id: string
+  severity: 'high' | 'medium' | 'planning'
+  title: string
+  amount?: number
+  txId?: string
+  detail: string
+  why: string
+  action: string
+}
+
+export interface Vendor {
+  name: string
+  kinds: LegKind[]
+}
+
+export const VENDORS: Vendor[] = [
+  { name: 'Fast Insights WH-RNO-2 (Reno, NV)', kinds: ['pick', 'outbound'] },
+  { name: 'Cascade Freight Lines', kinds: ['truck'] },
+  { name: 'Redline Haulage Co.', kinds: ['truck'] },
+  { name: 'Harbor Point Boatyard (Oakland, CA)', kinds: ['boatyard'] },
+  { name: 'Bayside Marine Terminal (Oakland, CA)', kinds: ['boatyard'] },
+  { name: 'Pacific Meridian Lines', kinds: ['ocean'] },
+  { name: 'Atlantic Crown Shipping', kinds: ['ocean'] },
+  { name: 'AeroSwift Cargo', kinds: ['air'] },
+  { name: 'Rotterdam Port Services B.V.', kinds: ['port'] },
+  { name: 'Halifax Port Terminal', kinds: ['port'] },
+  { name: 'VanderZee Customs Brokerage B.V.', kinds: ['customs'] },
+  { name: 'Maple Leaf Customs Brokers', kinds: ['customs'] },
+  { name: 'Northgate Couriers', kinds: ['courier', 'delivery'] },
+]
+
+export const LEG_KINDS: { key: LegKind; label: string }[] = [
+  { key: 'pick', label: 'Warehouse pick' },
+  { key: 'outbound', label: 'Outbound scan' },
+  { key: 'truck', label: 'Truck freight' },
+  { key: 'boatyard', label: 'Boatyard hand-off' },
+  { key: 'ocean', label: 'Ocean vessel' },
+  { key: 'air', label: 'Air freight' },
+  { key: 'port', label: 'Port arrival' },
+  { key: 'customs', label: 'Customs clearance' },
+  { key: 'courier', label: 'Local courier' },
+  { key: 'delivery', label: 'Customer delivery' },
+]
+
+export const LOCATIONS: string[] = [
+  'WH-RNO-2, Reno, NV, USA',
+  'Harbor Point Boatyard, Oakland, CA, USA',
+  'Bayside Marine Terminal, Oakland, CA, USA',
+  'Port of Oakland, CA, USA',
+  'Port of Rotterdam, Netherlands',
+  'Port of Halifax, Canada',
+  'Customs Zone, Rotterdam, Netherlands',
+  'Customer site — Utrecht, Netherlands',
+  'Customer site — Toronto, Canada',
+  'Trade show — Las Vegas, NV, USA',
+]
+
+export interface CustomsDocReq {
+  doc: string
+  desc: string
+}
+
+export const CUSTOMS_REQUIREMENTS: Record<string, CustomsDocReq[]> = {
+  NL: [
+    { doc: 'Commercial Invoice', desc: 'Customs valuation basis — customs price list, not the sales invoice' },
+    { doc: 'Packing List', desc: 'Serials and cartons must tie to the custody ledger' },
+    { doc: 'EORI Registration', desc: 'EU importer registration number for Fast Insights B.V.' },
+    { doc: 'CE Declaration of Conformity', desc: 'Required for electronics entering the EU' },
+    { doc: 'Customs Valuation Worksheet', desc: 'Documents why declared value differs from sales price' },
+  ],
+  CA: [
+    { doc: 'Canada Customs Invoice (CCI)', desc: 'Valuation basis for CBSA' },
+    { doc: 'Packing List', desc: 'Serials and cartons must tie to the custody ledger' },
+    { doc: 'CUSMA Certificate of Origin', desc: 'Duty-free treatment under CUSMA/USMCA' },
+    { doc: 'B3-3 Customs Coding Form', desc: 'Filed by the customs broker at entry' },
+  ],
+}
+
+export const PRODUCTS: Record<string, { salesUnit: number; customsUnit: number; hs: string }> = {
+  'ValeEdge E2': { salesUnit: 12400, customsUnit: 9800, hs: '8471.50' },
+  'PerimeterOne P4': { salesUnit: 8200, customsUnit: 6900, hs: '8525.81' },
+  'SkyWatch S1 Dock': { salesUnit: 21500, customsUnit: 17200, hs: '8526.91' },
+}
+
+export const SEED_SHIPMENTS: Shipment[] = [
+  {
+    txId: 'TX-20481',
+    direction: 'outbound',
+    product: 'ValeEdge E2',
+    unitCount: 15,
+    serialsSample: ['VE-E2-2201', 'VE-E2-2202', 'VE-E2-2203'],
+    customer: 'Meridian Health Europe B.V.',
+    destination: 'Utrecht, Netherlands',
+    country: 'NL',
+    incoterms: 'DAP Utrecht',
+    salesValue: 186000,
+    customsValue: 147000,
+    invoice: { id: 'INV-8841', date: '2026-12-30' },
+    legs: [
+      { id: 'L1', kind: 'pick', vendor: 'Fast Insights WH-RNO-2 (Reno, NV)', location: 'WH-RNO-2, Reno, NV, USA', date: '2026-12-15', status: 'complete', docs: [{ name: 'Pick List PL-5521', ready: true }] },
+      { id: 'L2', kind: 'outbound', vendor: 'Fast Insights WH-RNO-2 (Reno, NV)', location: 'WH-RNO-2, Reno, NV, USA', date: '2026-12-16', status: 'complete', docs: [{ name: 'Bill of Lading BOL-7719', ready: true }] },
+      { id: 'L3', kind: 'truck', vendor: 'Cascade Freight Lines', location: 'Harbor Point Boatyard, Oakland, CA, USA', date: '2026-12-17', status: 'complete', docs: [{ name: 'Delivery Receipt DR-1180', ready: true }], note: 'Driver-to-boatyard hand-off signed' },
+      { id: 'L4', kind: 'boatyard', vendor: 'Harbor Point Boatyard (Oakland, CA)', location: 'Port of Oakland, CA, USA', date: '2026-12-19', status: 'complete', docs: [{ name: 'Dock Receipt DKR-0442', ready: true }], note: 'Loaded MV Meridian Star' },
+      { id: 'L5', kind: 'ocean', vendor: 'Pacific Meridian Lines', location: 'Port of Rotterdam, Netherlands', date: '2026-12-28', status: 'complete', docs: [{ name: 'Ocean B/L OBL-3327', ready: true }] },
+      { id: 'L6', kind: 'customs', vendor: 'VanderZee Customs Brokerage B.V.', location: 'Customs Zone, Rotterdam, Netherlands', date: '2026-12-29', status: 'active', docs: [
+        { name: 'Commercial Invoice', ready: true },
+        { name: 'Packing List', ready: true },
+        { name: 'EORI Registration', ready: true },
+        { name: 'CE Declaration of Conformity', ready: false },
+        { name: 'Customs Valuation Worksheet', ready: false },
+      ], note: 'Broker requested valuation worksheet' },
+      { id: 'L7', kind: 'delivery', vendor: 'Northgate Couriers', location: 'Customer site — Utrecht, Netherlands', date: null, eta: '2027-01-04', status: 'pending', docs: [{ name: 'Proof of Delivery', ready: false }] },
+    ],
+  },
+  {
+    txId: 'TX-20490',
+    direction: 'outbound',
+    product: 'PerimeterOne P4',
+    unitCount: 8,
+    serialsSample: ['PO-P4-3312', 'PO-P4-3313', 'PO-P4-3314'],
+    customer: 'Aurora Security Co.',
+    destination: 'Toronto, Canada',
+    country: 'CA',
+    incoterms: 'FCA Reno',
+    salesValue: 65600,
+    customsValue: 55200,
+    legs: [
+      { id: 'L1', kind: 'pick', vendor: 'Fast Insights WH-RNO-2 (Reno, NV)', location: 'WH-RNO-2, Reno, NV, USA', date: '2026-12-29', status: 'complete', docs: [{ name: 'Pick List PL-5544', ready: true }] },
+      { id: 'L2', kind: 'outbound', vendor: 'Fast Insights WH-RNO-2 (Reno, NV)', location: 'WH-RNO-2, Reno, NV, USA', date: null, eta: '2026-12-30', status: 'active', docs: [{ name: 'Bill of Lading', ready: false }], note: 'Awaiting outbound scan — demo the scan flow here' },
+    ],
+  },
+  {
+    txId: 'TX-20476',
+    direction: 'outbound',
+    product: 'PerimeterOne P4',
+    unitCount: 6,
+    serialsSample: ['PO-P4-3288', 'PO-P4-3289', 'PO-P4-3290'],
+    customer: 'Nordbank Facilities Ltd.',
+    destination: 'Toronto, Canada',
+    country: 'CA',
+    incoterms: 'FCA Reno',
+    salesValue: 49200,
+    customsValue: 41400,
+    invoice: { id: 'INV-8802', date: '2026-12-18' },
+    legs: [
+      { id: 'L1', kind: 'pick', vendor: 'Fast Insights WH-RNO-2 (Reno, NV)', location: 'WH-RNO-2, Reno, NV, USA', date: '2026-12-16', status: 'complete', docs: [{ name: 'Pick List PL-5510', ready: true }] },
+      { id: 'L2', kind: 'outbound', vendor: 'Fast Insights WH-RNO-2 (Reno, NV)', location: 'WH-RNO-2, Reno, NV, USA', date: '2026-12-17', status: 'complete', docs: [{ name: 'Bill of Lading BOL-7702', ready: true }] },
+      { id: 'L3', kind: 'air', vendor: 'AeroSwift Cargo', location: 'Toronto Pearson, Canada', date: '2026-12-18', status: 'complete', docs: [{ name: 'Air Waybill AWB-9012', ready: true }] },
+      { id: 'L4', kind: 'customs', vendor: 'Maple Leaf Customs Brokers', location: 'Toronto Pearson, Canada', date: '2026-12-19', status: 'complete', docs: [
+        { name: 'Canada Customs Invoice (CCI)', ready: true },
+        { name: 'Packing List', ready: true },
+        { name: 'CUSMA Certificate of Origin', ready: true },
+        { name: 'B3-3 Customs Coding Form', ready: true },
+      ] },
+      { id: 'L5', kind: 'delivery', vendor: 'Northgate Couriers', location: 'Customer site — Toronto, Canada', date: '2026-12-21', status: 'complete', docs: [{ name: 'Proof of Delivery POD-6631', ready: true }] },
+    ],
+  },
+  {
+    txId: 'TX-20461',
+    direction: 'outbound',
+    product: 'SkyWatch S1 Dock',
+    unitCount: 4,
+    serialsSample: ['SW-S1-1104', 'SW-S1-1105'],
+    customer: 'Meridian Health Europe B.V.',
+    destination: 'Utrecht, Netherlands',
+    country: 'NL',
+    incoterms: 'DAP Utrecht',
+    salesValue: 86000,
+    customsValue: 68800,
+    legs: [
+      { id: 'L1', kind: 'pick', vendor: 'Fast Insights WH-RNO-2 (Reno, NV)', location: 'WH-RNO-2, Reno, NV, USA', date: '2026-12-18', status: 'complete', docs: [{ name: 'Pick List PL-5516', ready: true }] },
+      { id: 'L2', kind: 'outbound', vendor: 'Fast Insights WH-RNO-2 (Reno, NV)', location: 'WH-RNO-2, Reno, NV, USA', date: '2026-12-19', status: 'complete', docs: [{ name: 'Bill of Lading BOL-7710', ready: true }] },
+      { id: 'L3', kind: 'truck', vendor: 'Redline Haulage Co.', location: 'Bayside Marine Terminal, Oakland, CA, USA', date: '2026-12-21', status: 'complete', docs: [{ name: 'Delivery Receipt DR-1194', ready: true }] },
+      { id: 'L4', kind: 'boatyard', vendor: 'Bayside Marine Terminal (Oakland, CA)', location: 'Bayside Marine Terminal, Oakland, CA, USA', date: null, eta: '2027-01-02', status: 'active', docs: [{ name: 'Dock Receipt', ready: false }], note: 'Awaiting vessel space — at boatyard since Dec 21' },
+    ],
+  },
+  {
+    txId: 'RMA-1043',
+    direction: 'rma',
+    product: 'SkyWatch S1 Dock',
+    unitCount: 2,
+    serialsSample: ['SW-S1-1071', 'SW-S1-1072'],
+    customer: 'Meridian Health Europe B.V.',
+    destination: 'WH-RNO-2, Reno, NV (return)',
+    country: 'NL',
+    incoterms: 'Return — seller freight',
+    salesValue: 43000,
+    linkedTo: 'TX-20412',
+    legs: [
+      { id: 'R1', kind: 'courier', vendor: 'Northgate Couriers', location: 'Customer site — Utrecht, Netherlands', date: '2026-12-22', status: 'complete', docs: [{ name: 'RMA Authorization RMA-1043', ready: true }], note: 'Defect confirmed — same TX chain, reversed' },
+      { id: 'R2', kind: 'port', vendor: 'Rotterdam Port Services B.V.', location: 'Port of Rotterdam, Netherlands', date: '2026-12-27', status: 'complete', docs: [{ name: 'Export Declaration EXD-2210', ready: true }] },
+      { id: 'R3', kind: 'ocean', vendor: 'Atlantic Crown Shipping', location: 'Port of Oakland, CA, USA', date: null, eta: '2027-01-09', status: 'active', docs: [{ name: 'Ocean B/L', ready: false }] },
+      { id: 'R4', kind: 'truck', vendor: 'Cascade Freight Lines', location: 'WH-RNO-2, Reno, NV, USA', date: null, eta: '2027-01-11', status: 'pending', docs: [{ name: 'Return Receipt', ready: false }] },
+    ],
+  },
+  {
+    txId: 'TX-20455',
+    direction: 'internal',
+    product: 'ValeEdge E2',
+    unitCount: 1,
+    serialsSample: ['VE-E2-2140'],
+    customer: 'Internal — Marketing (demo unit)',
+    destination: 'Trade show — Las Vegas, NV, USA',
+    country: 'US',
+    salesValue: 12400,
+    legs: [
+      { id: 'L1', kind: 'pick', vendor: 'Fast Insights WH-RNO-2 (Reno, NV)', location: 'WH-RNO-2, Reno, NV, USA', date: '2026-12-12', status: 'complete', docs: [{ name: 'Internal Use Form IU-0097', ready: true }], note: 'Internal use — no revenue event' },
+      { id: 'L2', kind: 'delivery', vendor: 'Northgate Couriers', location: 'Trade show — Las Vegas, NV, USA', date: '2026-12-13', status: 'complete', docs: [{ name: 'Transfer Receipt', ready: true }], note: 'Return due Jan 15 — still Fast Insights inventory' },
+    ],
+  },
+]
+
+export const SEED_FLAGS: Flag[] = [
+  {
+    id: 'FLG-01',
+    severity: 'high',
+    title: 'Revenue cutoff risk — DAP delivery lands in FY2027',
+    amount: 186000,
+    txId: 'TX-20481',
+    detail: 'Incoterms are DAP Utrecht: revenue recognizes at customer delivery (ETA Jan 4, 2027). Invoice INV-8841 is dated Dec 30, 2026.',
+    why: 'Recognizing $186,000 in FY2026 for goods still at Rotterdam customs would misstate December revenue. Custody events prove control has not transferred.',
+    action: 'Hold INV-8841 out of December revenue; route to Controller with the custody ledger as cutoff evidence.',
+  },
+  {
+    id: 'FLG-02',
+    severity: 'high',
+    title: 'Customs valuation differs from sales invoice — document it',
+    amount: 39000,
+    txId: 'TX-20481',
+    detail: 'Declared customs value $147,000 (customs price list, $9,800/unit) vs. sales invoice $186,000 ($12,400/unit).',
+    why: 'A price-list valuation is legitimate but auditors and brokers need the method documented. Missing worksheet is already holding clearance.',
+    action: 'Complete the Customs Valuation Worksheet and attach it to TX-20481 before broker follow-up on Jan 2.',
+  },
+  {
+    id: 'FLG-03',
+    severity: 'medium',
+    title: 'RMA in transit — credit memo not yet accrued',
+    amount: 43000,
+    txId: 'RMA-1043',
+    detail: '2 SkyWatch S1 Docks returning from Utrecht (defect). Return acknowledged Dec 22; units on the water at year-end.',
+    why: 'FY2026 revenue is overstated by $43,000 if the return accrual is missed; the reverse custody chain is the evidence.',
+    action: 'Accrue sales return reserve for RMA-1043 in December; Controller approves the credit memo on receipt.',
+  },
+  {
+    id: 'FLG-04',
+    severity: 'medium',
+    title: 'In-transit aging — 9 days at boatyard, include in count',
+    amount: 86000,
+    txId: 'TX-20461',
+    detail: '4 SkyWatch S1 Docks at Bayside Marine Terminal since Dec 21 awaiting vessel space (DAP terms — still Fast Insights inventory).',
+    why: 'Goods off-site but owned must appear in the Dec 31 physical count as in-transit inventory, or existence testing fails.',
+    action: 'Add TX-20461 to the year-end count as in-transit; request vessel ETA from Bayside.',
+  },
+  {
+    id: 'FLG-05',
+    severity: 'planning',
+    title: 'Tax timing — shift $500K stock receipt from Dec 30 to Jan 2',
+    amount: 500000,
+    detail: 'Replenishment PO-7788 ($500,000, 48 units) is scheduled to arrive Dec 30. Receiving Jan 2 keeps it off the Jan 1 personal-property-tax assessment date and out of year-end count scope.',
+    why: 'Inventory on hand at the assessment date drives property tax in several states; December receipts also expand count scope and working capital at the worst moment. Estimated saving ≈ $6,500 (confirm with tax advisor).',
+    action: 'Ask Purchasing to reschedule PO-7788 receipt to Jan 2; Transit Guard will track the inbound chain.',
+  },
+]
+
+export interface CountBucket {
+  key: string
+  units: number
+}
+
+/** Dec 31 physical count snapshot — ties to the 1,200-unit fleet in the Close Guard suite. */
+export const COUNT_SNAPSHOT: CountBucket[] = [
+  { key: 'countWarehouse', units: 412 },
+  { key: 'countInTransit', units: 35 },
+  { key: 'countAtCustoms', units: 15 },
+  { key: 'countDelivered', units: 731 },
+  { key: 'countInternal', units: 7 },
+]
+
+export const SCAN_QUEUE: { serial: string; product: string; txId: string }[] = [
+  { serial: 'PO-P4-3312', product: 'PerimeterOne P4', txId: 'TX-20490' },
+  { serial: 'PO-P4-3313', product: 'PerimeterOne P4', txId: 'TX-20490' },
+  { serial: 'VE-E2-2205', product: 'ValeEdge E2', txId: 'TX-20481' },
+]
+
+export function fmtUsd(n: number): string {
+  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+}
+
+export function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  const [y, m, d] = iso.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+}
+
+export function daysBetween(fromIso: string, toIso: string): number {
+  const [fy, fm, fd] = fromIso.split('-').map(Number)
+  const [ty, tm, td] = toIso.split('-').map(Number)
+  return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86400000)
+}
+
+export function legLabel(kind: LegKind): string {
+  return LEG_KINDS.find((l) => l.key === kind)?.label ?? kind
+}
+
+export function activeLeg(s: Shipment): Leg | undefined {
+  return s.legs.find((l) => l.status !== 'complete')
+}
+
+export function isDelivered(s: Shipment): boolean {
+  const last = s.legs[s.legs.length - 1]
+  if (!last || !s.legs.every((l) => l.status === 'complete')) return false
+  return last.kind === 'delivery' || s.direction === 'rma'
+}

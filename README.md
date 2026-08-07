@@ -54,10 +54,24 @@ Inventory Close Guard/
 │   └── HANDOFF.md                                  ← build handoff and next steps
 ├── index.html                                      ← Vite entry point
 ├── vite.config.ts / tsconfig.json / package.json   ← build configuration
-└── src/                                            ← React + Vite + Tailwind single-page app
-    ├── main.tsx / App.tsx                          ← app entry and shell
-    ├── data.ts / types.ts                          ← typed seed-data module
-    └── index.css                                   ← Tailwind entry
+├── src/                                            ← React + Vite + Tailwind single-page app
+│   ├── main.tsx / App.tsx                          ← app entry and shell
+│   ├── data.ts / types.ts                          ← typed seed-data module
+│   └── index.css                                   ← Tailwind entry
+├── transit-guard/                                  ← sibling app: Transit Guard (chain-of-custody tracking demo, port 5174)
+└── deck/
+    └── Transit_Guard_Pitch.pptx                    ← Transit Guard hackathon pitch deck (problem, solution, TAM/SAM/SOM)
+```
+
+---
+
+## Sibling App: Transit Guard
+
+**Transit Guard** — *Every hand-off. One transaction truth.* — is the second product in the Fast Insights Guard suite, built in `transit-guard/` as a self-contained Vite app (it never touches the Close Guard seed data). It is a mobile-styled chain-of-custody tracker: scan a serial out of the warehouse, answer why it is leaving (sale / internal use / RMA), then log every custody hand-off — truck, boatyard, ocean vessel, port, customs, customer, and the reversed RMA chain — under one transaction ID, with per-country customs document checklists, customs-vs-sales valuation comparison, AI revenue-recognition flags, a Dec 31 count snapshot, custody-ledger CSV export, a trilingual UI (EN/ES/FR), and on-device multilingual OCR (Tesseract, fully offline).
+
+```bash
+npm install --prefix transit-guard
+npm run dev --prefix transit-guard   # http://localhost:5174
 ```
 
 ---
