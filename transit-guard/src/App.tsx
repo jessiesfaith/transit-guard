@@ -49,7 +49,7 @@ function Toast() {
 function Phone({ wide }: { wide: boolean }) {
   const { t, lang, setLang } = useI18n()
   const { state, dispatch } = useStore()
-  const [tab, setTab] = useState<Tab>('scan')
+  const [tab, setTab] = useState<Tab>('plan')
   const [selectedTx, setSelectedTx] = useState<string | null>(null)
   const role = state.role
 
@@ -62,12 +62,12 @@ function Phone({ wide }: { wide: boolean }) {
     if (next === role) return
     dispatch({ type: 'SET_ROLE', role: next })
     setSelectedTx(null)
-    setTab(next === 'company' ? 'scan' : 'offers')
+    setTab(next === 'company' ? 'plan' : 'offers')
   }
 
   const companyTabs: { key: Tab; label: string }[] = [
-    { key: 'scan', label: t('navScan') },
     { key: 'plan', label: t('navPlan') },
+    { key: 'scan', label: t('navScan') },
     { key: 'track', label: t('navTrack') },
     { key: 'customs', label: t('navCustoms') },
     { key: 'flags', label: t('navFlags') },
@@ -230,8 +230,8 @@ function SidePanels({ children }: { children: React.ReactNode }) {
         <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
           <p className="text-[10px] uppercase tracking-widest text-emerald-400 font-bold mb-3">Demo script</p>
           <ol className="text-xs text-slate-400 space-y-2.5 leading-snug list-decimal list-inside">
-            <li><b className="text-slate-200">Scan</b> — scan a serial, answer "why is it leaving?", log to TX-20490.</li>
             <li><b className="text-slate-200">Plan</b> — AI vendor search: Utrecht, need-by Jan 12 → ranked routes + customs bulletins → Apply → new chain appears in Track.</li>
+            <li><b className="text-slate-200">Scan</b> — scan the shipping label, answer "why is it leaving?", log to TX-20490.</li>
             <li><b className="text-slate-200">Track</b> — open TX-20481: warehouse → truck → boatyard → ocean → Rotterdam → customs. Add a hand-off with dropdowns.</li>
             <li><b className="text-slate-200">$1M lane</b> — open TX-20499: Palo Alto → New York → ocean → UK → Poland → Geneva. Perishable −2 °C, dry ice re-icing, FOB destination, EU hand-off QR, partner-API legs.</li>
             <li><b className="text-slate-200">Docs pack</b> — on a proposed vendor leg, tap "Docs pack (PDF)": company-approved valuation worksheet + packing slip + BOL. Status stays "in progress" until the carrier scans the label.</li>
