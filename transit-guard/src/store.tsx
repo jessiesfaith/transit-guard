@@ -52,6 +52,7 @@ export type Action =
   | { type: 'SET_ROLE'; role: Role }
   | { type: 'ACCEPT_OFFER'; offerId: string; toast: string }
   | { type: 'DECLINE_OFFER'; offerId: string; toast: string }
+  | { type: 'REROUTE_ACCEPT'; offerId: string; altVendor: string; toast: string }
   | { type: 'VENDOR_LABEL_SCAN'; txId: string; vendor: string; mode: 'pickup' | 'substitute'; toast: string }
   | { type: 'APPLY_ROUTE'; payload: ApplyRoutePayload; toast: string }
   | { type: 'LOG_SCAN'; scan: ScanEvent; toast: string }
@@ -61,8 +62,6 @@ export type Action =
   | { type: 'SET_DOC_READY'; txId: string; legId: string; doc: string; toast?: string }
   | { type: 'TOAST'; toast: string }
   | { type: 'CLEAR_TOAST' }
-
-let legSeq = 100
 
 function reverseKind(kind: LegKind): LegKind {
   if (kind === 'pick' || kind === 'outbound') return 'truck'
@@ -82,7 +81,7 @@ function buildRouteShipment(p: ApplyRoutePayload): Shipment {
     const docsPack = isTransport && firstTransport ? ('in-progress' as const) : undefined
     if (isTransport && firstTransport) firstTransport = false
     return {
-      id: `LX-${legSeq++}`,
+      id: `LX-${p.txId}-${i}`,
       kind: rl.kind,
       vendor: rl.vendor,
       location: rl.location,
@@ -113,7 +112,7 @@ function buildRouteShipment(p: ApplyRoutePayload): Shipment {
     customsValue: (prod?.customsUnit ?? 0) * p.unitCount,
     legs: [
       {
-        id: `LX-${legSeq++}`,
+        id: `LX-${p.txId}-pick`,
         kind: 'pick',
         vendor: 'Fast Insights WH-RNO-2 (Reno, NV)',
         location: 'WH-RNO-2, Reno, NV, USA',
@@ -124,7 +123,7 @@ function buildRouteShipment(p: ApplyRoutePayload): Shipment {
         note: 'Created from AI vendor search',
       },
       {
-        id: `LX-${legSeq++}`,
+        id: `LX-${p.txId}-out`,
         kind: 'outbound',
         vendor: 'Fast Insights WH-RNO-2 (Reno, NV)',
         location: 'WH-RNO-2, Reno, NV, USA',
@@ -146,7 +145,7 @@ function reducer(state: State, action: Action): State {
       const offer = state.offers.find((o) => o.id === action.offerId)
       if (!offer || offer.status !== 'offered') return state
       const newLeg: Leg = {
-        id: `LX-${legSeq++}`,
+        id: `LX-${offer.id}`,
         kind: offer.kind,
         vendor: offer.vendor,
         location: offer.to,
@@ -171,6 +170,32 @@ function reducer(state: State, action: Action): State {
         toast: action.toast,
         offers: state.offers.map((o) => (o.id === action.offerId ? { ...o, status: 'declined' as const } : o)),
       }
+    case 'REROUTE_ACCEPT': {
+      const offer = state.offers.find((o) => o.id === action.offerId)
+      if (!offer) return state
+      const target = state.shipments.find((s) => s.txId === offer.txId)
+      if (!target || target.legs.some((l) => l.status !== 'complete' && l.vendor === action.altVendor)) {
+        return { ...state, toast: action.toast }
+      }
+      const reroutedLeg: Leg = {
+        id: `LX-${offer.id}-R`,
+        kind: offer.kind,
+        vendor: action.altVendor,
+        location: offer.to,
+        date: null,
+        eta: addDays(offer.pickup, 4),
+        status: 'pending',
+        accept: 'accepted',
+        docsPack: 'in-progress',
+        docs: [{ name: 'Hand-off receipt', ready: false }],
+        note: `Rerouted by the agent — ${offer.vendor} declined, ${action.altVendor} accepted (availability match on priority)`,
+      }
+      return {
+        ...state,
+        toast: action.toast,
+        shipments: state.shipments.map((s) => (s.txId === offer.txId ? { ...s, legs: [...s.legs, reroutedLeg] } : s)),
+      }
+    }
     case 'VENDOR_LABEL_SCAN':
       return {
         ...state,
@@ -213,7 +238,7 @@ function reducer(state: State, action: Action): State {
             legs = [
               ...legs,
               {
-                id: `LX-${legSeq++}`,
+                id: `LX-${s.txId}-scan`,
                 kind: 'truck' as const,
                 vendor: action.vendor,
                 location: s.destination,
@@ -265,7 +290,7 @@ function reducer(state: State, action: Action): State {
             ...s,
             legs: [
               ...s.legs.map((l) => (l.status === 'active' ? { ...l, status: 'complete' as const, date: l.date ?? action.leg.date } : l)),
-              { ...action.leg, id: `LX-${legSeq++}`, status: 'complete' as const },
+              { ...action.leg, id: `LX-${s.txId}-${s.legs.length}`, status: 'complete' as const },
             ],
           }
         }),
@@ -306,7 +331,7 @@ function reducer(state: State, action: Action): State {
         invoice: undefined,
         legs: [
           {
-            id: `LX-${legSeq++}`,
+            id: `LX-${src.txId}-rma0`,
             kind: 'courier',
             vendor: 'Northgate Couriers',
             location: src.legs[src.legs.length - 1]?.location ?? src.destination,
@@ -316,7 +341,7 @@ function reducer(state: State, action: Action): State {
             note: 'Return intake — same chain, reversed',
           },
           ...reversed.map((l, i) => ({
-            id: `LX-${legSeq++}`,
+            id: `LX-${src.txId}-rma${i + 1}`,
             kind: reverseKind(l.kind),
             vendor: l.vendor,
             location: l.location,

@@ -231,33 +231,29 @@ function Detail({ s, onBack, onOpenTx }: { s: Shipment; onBack: () => void; onOp
                       ))}
                     </div>
                   )}
-                  {(leg.accept || leg.docsPack) && (
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                      {leg.accept === 'contacting' && (
-                        <span className="text-[9px] font-semibold rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 px-2 py-0.5 animate-pulse">
-                          ⏳ {t('agentContacting')}
-                        </span>
-                      )}
-                      {leg.accept === 'accepted' && (
-                        <span className="text-[9px] font-semibold rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-0.5">
-                          ✓ {t('acceptedBy')}
-                        </span>
-                      )}
-                      {leg.docsPack && (
-                        <>
-                          <button
-                            onClick={() => downloadDocsPack(s, leg)}
-                            className="text-[9px] font-bold rounded-lg bg-slate-900 text-white px-2 py-1"
-                          >
-                            📄 {t('docsPack')}
-                          </button>
-                          <span className={`text-[9px] font-semibold rounded-full border px-2 py-0.5 ${leg.docsPack === 'received' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-amber-50 border-amber-300 text-amber-700'}`}>
-                            {leg.docsPack === 'received' ? `✓ ${t('docsReceived')}` : `… ${t('docsInProgress')}`}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  )}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                    {leg.accept === 'contacting' && (
+                      <span className="text-[9px] font-semibold rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 px-2 py-0.5 animate-pulse">
+                        ⏳ {t('agentContacting')}
+                      </span>
+                    )}
+                    {leg.accept === 'accepted' && (
+                      <span className="text-[9px] font-semibold rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-0.5">
+                        ✓ {t('acceptedBy')}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => downloadDocsPack(s, leg)}
+                      className="text-[9px] font-bold rounded-lg bg-slate-900 text-white px-2 py-1"
+                    >
+                      📄 {t('docsPack')}
+                    </button>
+                    {leg.docsPack && (
+                      <span className={`text-[9px] font-semibold rounded-full border px-2 py-0.5 ${leg.docsPack === 'received' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-amber-50 border-amber-300 text-amber-700'}`}>
+                        {leg.docsPack === 'received' ? `✓ ${t('docsReceived')}` : `… ${t('docsInProgress')}`}
+                      </span>
+                    )}
+                  </div>
                   {leg.note && <p className="text-[10px] italic text-slate-400 mt-1">{leg.note}</p>}
                 </div>
               </div>

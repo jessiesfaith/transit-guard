@@ -32,7 +32,12 @@ export function OffersView() {
           {o.status === 'offered' && (
             <div className="flex gap-2 pt-1">
               <button
-                onClick={() => dispatch({ type: 'DECLINE_OFFER', offerId: o.id, toast: t('offerDeclined') })}
+                onClick={() => {
+                  dispatch({ type: 'DECLINE_OFFER', offerId: o.id, toast: t('rerouting') })
+                  window.setTimeout(() => {
+                    dispatch({ type: 'REROUTE_ACCEPT', offerId: o.id, altVendor: 'Redline Haulage Co.', toast: t('rerouted') })
+                  }, 2600)
+                }}
                 className="flex-1 rounded-xl border border-slate-300 text-slate-600 text-xs font-semibold py-2.5 bg-white"
               >
                 {t('declineBtn')}

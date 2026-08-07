@@ -46,7 +46,7 @@ function Toast() {
   )
 }
 
-function Phone() {
+function Phone({ wide }: { wide: boolean }) {
   const { t, lang, setLang } = useI18n()
   const { state, dispatch } = useStore()
   const [tab, setTab] = useState<Tab>('scan')
@@ -80,14 +80,40 @@ function Phone() {
   ]
   const tabs = role === 'company' ? companyTabs : vendorTabs
 
+  const tabBar = (
+    <div className={wide ? 'bg-white border-b border-slate-200 px-2 py-1 flex justify-center gap-5' : 'bg-white border-t border-slate-200 px-2 py-2 flex'}>
+      {tabs.map(({ key, label }) => (
+        <button
+          key={key}
+          onClick={() => {
+            setTab(key)
+            if (key !== 'track') setSelectedTx(null)
+          }}
+          className={`${wide ? 'px-3' : 'flex-1'} flex flex-col items-center gap-0.5 py-1 rounded-xl ${tab === key ? 'text-emerald-600' : 'text-slate-400'}`}
+        >
+          <TabIcon tab={key} />
+          <span className="text-[9px] font-semibold">{label}</span>
+        </button>
+      ))}
+    </div>
+  )
+
   return (
-    <div className="relative w-[390px] max-w-full h-[800px] max-h-[94vh] bg-slate-50 rounded-[2.5rem] border-[10px] border-slate-900 shadow-2xl shadow-black/50 overflow-hidden flex flex-col">
+    <div
+      className={
+        wide
+          ? 'relative w-[900px] max-w-[94vw] h-[92vh] bg-slate-50 rounded-2xl border border-slate-700 shadow-2xl shadow-black/50 overflow-hidden flex flex-col'
+          : 'relative w-[390px] max-w-full h-[800px] max-h-[94vh] bg-slate-50 rounded-[2.5rem] border-[10px] border-slate-900 shadow-2xl shadow-black/50 overflow-hidden flex flex-col'
+      }
+    >
       <div className="bg-slate-900 text-white px-5 pt-2 pb-3">
-        <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1.5">
-          <span>9:41</span>
-          <span className="w-16 h-4 bg-black rounded-full" />
-          <span>▮▮▮ 100%</span>
-        </div>
+        {!wide && (
+          <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1.5">
+            <span>9:41</span>
+            <span className="w-16 h-4 bg-black rounded-full" />
+            <span>▮▮▮ 100%</span>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-base font-black tracking-tight">
@@ -125,7 +151,10 @@ function Phone() {
         </div>
       </div>
 
+      {wide && tabBar}
+
       <div className="flex-1 overflow-y-auto phone-scroll">
+        <div className={wide ? 'max-w-xl mx-auto' : undefined}>
         {role === 'company' ? (
           <>
             {tab === 'scan' && <ScanView onOpenTx={openTx} />}
@@ -143,25 +172,35 @@ function Phone() {
           </>
         )}
         <div className="h-4" />
+        </div>
       </div>
 
       <Toast />
 
-      <div className="bg-white border-t border-slate-200 px-2 py-2 flex">
-        {tabs.map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => {
-              setTab(key)
-              if (key !== 'track') setSelectedTx(null)
-            }}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-1 rounded-xl ${tab === key ? 'text-emerald-600' : 'text-slate-400'}`}
-          >
-            <TabIcon tab={key} />
-            <span className="text-[9px] font-semibold">{label}</span>
-          </button>
-        ))}
+      {!wide && tabBar}
+    </div>
+  )
+}
+
+function Device() {
+  const [mode, setMode] = useState<'mobile' | 'web'>('mobile')
+  return (
+    <div className="flex flex-col items-center gap-3 min-w-0">
+      <div className="flex gap-1 rounded-full bg-slate-800/80 border border-slate-700 p-1">
+        <button
+          onClick={() => setMode('mobile')}
+          className={`text-[11px] font-bold rounded-full px-3 py-1 ${mode === 'mobile' ? 'bg-emerald-500 text-white' : 'text-slate-400'}`}
+        >
+          📱 Mobile
+        </button>
+        <button
+          onClick={() => setMode('web')}
+          className={`text-[11px] font-bold rounded-full px-3 py-1 ${mode === 'web' ? 'bg-emerald-500 text-white' : 'text-slate-400'}`}
+        >
+          🖥️ Web
+        </button>
       </div>
+      <Phone wide={mode === 'web'} />
     </div>
   )
 }
@@ -212,7 +251,7 @@ export default function App() {
     <I18nProvider>
       <StoreProvider>
         <SidePanels>
-          <Phone />
+          <Device />
         </SidePanels>
       </StoreProvider>
     </I18nProvider>
