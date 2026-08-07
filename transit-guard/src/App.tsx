@@ -2,16 +2,18 @@ import { useEffect, useState } from 'react'
 import { I18nProvider, useI18n, LANGS } from './i18n'
 import { StoreProvider, useStore } from './store'
 import ScanView from './views/ScanView'
+import PlanView from './views/PlanView'
 import TrackView from './views/TrackView'
 import CustomsView from './views/CustomsView'
 import FlagsView from './views/FlagsView'
 import AuditView from './views/AuditView'
 
-type Tab = 'scan' | 'track' | 'customs' | 'flags' | 'audit'
+type Tab = 'scan' | 'plan' | 'track' | 'customs' | 'flags' | 'audit'
 
 function TabIcon({ tab }: { tab: Tab }) {
   const paths: Record<Tab, string> = {
     scan: 'M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10',
+    plan: 'M12 3l1.7 4.8L18.5 9.5l-4.8 1.7L12 16l-1.7-4.8L5.5 9.5l4.8-1.7L12 3zM18.5 15l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6z',
     track: 'M1 8h12v8H1zM13 11h4l3 3v2h-7zM5.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM16.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z',
     customs: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c2.5 2.5 3.5 5.5 3.5 9s-1 6.5-3.5 9c-2.5-2.5-3.5-5.5-3.5-9s1-6.5 3.5-9z',
     flags: 'M5 21V4M5 4h12l-2.5 4L17 12H5',
@@ -53,6 +55,7 @@ function Phone() {
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'scan', label: t('navScan') },
+    { key: 'plan', label: t('navPlan') },
     { key: 'track', label: t('navTrack') },
     { key: 'customs', label: t('navCustoms') },
     { key: 'flags', label: t('navFlags') },
@@ -90,6 +93,7 @@ function Phone() {
 
       <div className="flex-1 overflow-y-auto phone-scroll">
         {tab === 'scan' && <ScanView onOpenTx={openTx} />}
+        {tab === 'plan' && <PlanView onOpenTx={openTx} />}
         {tab === 'track' && <TrackView selectedTx={selectedTx} setSelectedTx={setSelectedTx} />}
         {tab === 'customs' && <CustomsView />}
         {tab === 'flags' && <FlagsView onOpenTx={openTx} />}
@@ -133,6 +137,7 @@ function SidePanels({ children }: { children: React.ReactNode }) {
           <p className="text-[10px] uppercase tracking-widest text-emerald-400 font-bold mb-2">Complementary to</p>
           <p className="text-xs text-slate-300 leading-relaxed">NetSuite · Oracle · SAP · BlackLine</p>
           <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">The capture layer your ERP is missing — not a replacement.</p>
+          <p className="text-[11px] text-slate-500 mt-2 leading-relaxed"><span className="text-indigo-300 font-semibold">⇄ Carrier apps plug in too:</span> partner shipping apps log hand-offs through the Transit Guard API and keep the same transaction ID — QR scans in the EU.</p>
         </div>
       </aside>
 
@@ -143,7 +148,9 @@ function SidePanels({ children }: { children: React.ReactNode }) {
           <p className="text-[10px] uppercase tracking-widest text-emerald-400 font-bold mb-3">Demo script</p>
           <ol className="text-xs text-slate-400 space-y-2.5 leading-snug list-decimal list-inside">
             <li><b className="text-slate-200">Scan</b> — scan a serial, answer "why is it leaving?", log to TX-20490.</li>
+            <li><b className="text-slate-200">Plan</b> — AI vendor search: Utrecht, need-by Jan 12 → ranked routes + customs bulletins → Apply → new chain appears in Track.</li>
             <li><b className="text-slate-200">Track</b> — open TX-20481: warehouse → truck → boatyard → ocean → Rotterdam → customs. Add a hand-off with dropdowns.</li>
+            <li><b className="text-slate-200">$1M lane</b> — open TX-20499: Palo Alto → New York → ocean → UK → Poland → Geneva. Perishable −2 °C, dry ice re-icing, FOB destination, EU hand-off QR, partner-API legs.</li>
             <li><b className="text-slate-200">Customs</b> — doc checklist + customs price list vs. sales invoice ($147K vs $186K).</li>
             <li><b className="text-slate-200">Flags</b> — $186K DAP cutoff risk, RMA accrual, Dec-vs-Jan tax timing.</li>
             <li><b className="text-slate-200">Audit</b> — count snapshot, CSV export, run OCR on the sample doc (ES/FR/EN) and attach it.</li>

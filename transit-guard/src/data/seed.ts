@@ -34,6 +34,8 @@ export interface Leg {
   status: LegStatus
   docs: LegDoc[]
   note?: string
+  /** Set when the hand-off was logged by a partner carrier app through the Transit Guard API */
+  via?: string
 }
 
 export type Direction = 'outbound' | 'rma' | 'internal'
@@ -46,12 +48,14 @@ export interface Shipment {
   serialsSample: string[]
   customer: string
   destination: string
-  country: 'US' | 'NL' | 'CA'
+  country: 'US' | 'NL' | 'CA' | 'UK' | 'CH'
   incoterms?: string
   salesValue: number
   customsValue?: number
   invoice?: { id: string; date: string }
   linkedTo?: string
+  /** Handling chips, e.g. Perishable / −2 °C / Dry ice / FOB destination */
+  special?: string[]
   legs: Leg[]
 }
 
@@ -73,6 +77,12 @@ export interface Vendor {
 
 export const VENDORS: Vendor[] = [
   { name: 'Fast Insights WH-RNO-2 (Reno, NV)', kinds: ['pick', 'outbound'] },
+  { name: 'Fast Insights Cold Lab (Palo Alto, CA)', kinds: ['pick', 'outbound'] },
+  { name: 'Polar Reefer Express', kinds: ['truck'] },
+  { name: 'Hudson Gate Marine Terminal (NY)', kinds: ['port', 'boatyard'] },
+  { name: 'EuroChill Logistics Sp. z o.o.', kinds: ['truck'] },
+  { name: 'Vistula Customs Agency (Gdansk)', kinds: ['customs'] },
+  { name: 'Helvetia Customs Brokers AG', kinds: ['customs'] },
   { name: 'Cascade Freight Lines', kinds: ['truck'] },
   { name: 'Redline Haulage Co.', kinds: ['truck'] },
   { name: 'Harbor Point Boatyard (Oakland, CA)', kinds: ['boatyard'] },
@@ -84,6 +94,8 @@ export const VENDORS: Vendor[] = [
   { name: 'Halifax Port Terminal', kinds: ['port'] },
   { name: 'VanderZee Customs Brokerage B.V.', kinds: ['customs'] },
   { name: 'Maple Leaf Customs Brokers', kinds: ['customs'] },
+  { name: 'Thames Gate Customs Ltd.', kinds: ['customs'] },
+  { name: 'Albion Port Services (Felixstowe)', kinds: ['port'] },
   { name: 'Northgate Couriers', kinds: ['courier', 'delivery'] },
 ]
 
@@ -132,12 +144,27 @@ export const CUSTOMS_REQUIREMENTS: Record<string, CustomsDocReq[]> = {
     { doc: 'CUSMA Certificate of Origin', desc: 'Duty-free treatment under CUSMA/USMCA' },
     { doc: 'B3-3 Customs Coding Form', desc: 'Filed by the customs broker at entry' },
   ],
+  UK: [
+    { doc: 'Commercial Invoice', desc: 'Customs valuation basis — customs price list, not the sales invoice' },
+    { doc: 'Packing List', desc: 'Serials and cartons must tie to the custody ledger' },
+    { doc: 'GB EORI Registration', desc: 'UK importer registration — separate from the EU EORI' },
+    { doc: 'UKCA Marking Declaration', desc: 'UK conformity marking — CE-only no longer accepted for security electronics' },
+    { doc: 'CDS Import Declaration', desc: 'Filed by the broker in the Customs Declaration Service' },
+  ],
+  CH: [
+    { doc: 'Commercial Invoice', desc: 'Customs valuation basis for Swiss import' },
+    { doc: 'Packing List', desc: 'Lots and cartons must tie to the custody ledger' },
+    { doc: 'e-dec Import Declaration', desc: 'Swiss electronic customs declaration, filed by the broker' },
+    { doc: 'Perishable Goods Certificate', desc: 'Required for temperature-controlled biological goods' },
+    { doc: 'Cold-Chain Temperature Log', desc: 'Continuous −2 °C record from origin — attached from custody events' },
+  ],
 }
 
 export const PRODUCTS: Record<string, { salesUnit: number; customsUnit: number; hs: string }> = {
   'ValeEdge E2': { salesUnit: 12400, customsUnit: 9800, hs: '8471.50' },
   'PerimeterOne P4': { salesUnit: 8200, customsUnit: 6900, hs: '8525.81' },
   'SkyWatch S1 Dock': { salesUnit: 21500, customsUnit: 17200, hs: '8526.91' },
+  'CryoSense Assay Kit': { salesUnit: 25000, customsUnit: 21000, hs: '3822.19' },
 }
 
 export const SEED_SHIPMENTS: Shipment[] = [
@@ -168,6 +195,33 @@ export const SEED_SHIPMENTS: Shipment[] = [
         { name: 'Customs Valuation Worksheet', ready: false },
       ], note: 'Broker requested valuation worksheet' },
       { id: 'L7', kind: 'delivery', vendor: 'Northgate Couriers', location: 'Customer site — Utrecht, Netherlands', date: null, eta: '2027-01-04', status: 'pending', docs: [{ name: 'Proof of Delivery', ready: false }] },
+    ],
+  },
+  {
+    txId: 'TX-20499',
+    direction: 'outbound',
+    product: 'CryoSense Assay Kit',
+    unitCount: 40,
+    serialsSample: ['CS-AK-0711', 'CS-AK-0712', 'CS-AK-0713'],
+    customer: 'Helvetia BioLogistics AG',
+    destination: 'Geneva, Switzerland',
+    country: 'CH',
+    incoterms: 'FOB destination — Geneva',
+    salesValue: 1000000,
+    customsValue: 840000,
+    special: ['Perishable', '−2 °C required', 'Dry ice', 'FOB destination'],
+    legs: [
+      { id: 'C1', kind: 'pick', vendor: 'Fast Insights Cold Lab (Palo Alto, CA)', location: 'Cold Lab, Palo Alto, CA, USA', date: '2026-12-18', status: 'complete', docs: [{ name: 'Pick List PL-5533', ready: true }, { name: 'Temp Log — start (−2 °C)', ready: true }], note: 'Reefer packed, dry ice loaded' },
+      { id: 'C2', kind: 'outbound', vendor: 'Fast Insights Cold Lab (Palo Alto, CA)', location: 'Cold Lab, Palo Alto, CA, USA', date: '2026-12-19', status: 'complete', docs: [{ name: 'Bill of Lading BOL-7731', ready: true }] },
+      { id: 'C3', kind: 'truck', vendor: 'Polar Reefer Express', location: 'Hudson Gate Marine Terminal, New York, NY, USA', date: '2026-12-22', status: 'complete', via: 'Partner API', docs: [{ name: 'Reefer Receipt RR-2088', ready: true }, { name: 'Temp Log — re-ice, Chicago', ready: true }], note: 'Dry ice re-charged in Chicago — logged by carrier app' },
+      { id: 'C4', kind: 'port', vendor: 'Hudson Gate Marine Terminal (NY)', location: 'Port of New York, NY, USA', date: '2026-12-23', status: 'complete', docs: [{ name: 'Dock Receipt DKR-0466', ready: true }], note: 'Loaded MV Crown Atlantic — reefer hold −2 °C' },
+      { id: 'C5', kind: 'ocean', vendor: 'Atlantic Crown Shipping', location: 'Port of Southampton, United Kingdom', date: null, eta: '2027-01-02', status: 'active', via: 'Partner API', docs: [{ name: 'Ocean B/L OBL-3341', ready: true }, { name: 'Temp telemetry feed', ready: true }] },
+      { id: 'C6', kind: 'customs', vendor: 'Thames Gate Customs Ltd.', location: 'Southampton Customs, United Kingdom', date: null, eta: '2027-01-03', status: 'pending', docs: [{ name: 'UK Transit Declaration (T1)', ready: true }, { name: 'Perishable Goods Certificate', ready: true }] },
+      { id: 'C7', kind: 'truck', vendor: 'EuroChill Logistics Sp. z o.o.', location: 'Cold hub, Gdansk, Poland', date: null, eta: '2027-01-05', status: 'pending', docs: [{ name: 'CMR Consignment Note', ready: false }], note: 'Dry ice re-charge scheduled — Gdansk cold hub' },
+      { id: 'C8', kind: 'customs', vendor: 'Vistula Customs Agency (Gdansk)', location: 'EU entry — Gdansk, Poland', date: null, eta: '2027-01-06', status: 'pending', docs: [{ name: 'EU Import Declaration', ready: false }, { name: 'Sanitary Certificate (EU)', ready: true }] },
+      { id: 'C9', kind: 'truck', vendor: 'EuroChill Logistics Sp. z o.o.', location: 'Geneva, Switzerland', date: null, eta: '2027-01-08', status: 'pending', docs: [{ name: 'CMR Consignment Note', ready: false }] },
+      { id: 'C10', kind: 'customs', vendor: 'Helvetia Customs Brokers AG', location: 'Swiss customs, Geneva', date: null, eta: '2027-01-09', status: 'pending', docs: [{ name: 'e-dec Import Declaration', ready: false }, { name: 'Perishable Goods Certificate', ready: true }, { name: 'Cold-Chain Temperature Log', ready: false }] },
+      { id: 'C11', kind: 'delivery', vendor: 'Northgate Couriers', location: 'Customer site — Geneva, Switzerland', date: null, eta: '2027-01-10', status: 'pending', docs: [{ name: 'Proof of Delivery + temp acceptance', ready: false }], note: 'FOB destination — revenue recognizes here' },
     ],
   },
   {
@@ -280,6 +334,16 @@ export const SEED_FLAGS: Flag[] = [
     action: 'Hold INV-8841 out of December revenue; route to Controller with the custody ledger as cutoff evidence.',
   },
   {
+    id: 'FLG-06',
+    severity: 'high',
+    title: 'FOB destination — $1M revenue holds until Geneva delivery',
+    amount: 1000000,
+    txId: 'TX-20499',
+    detail: '40 CryoSense Assay Kits (perishable, −2 °C, dry ice) crossing the Atlantic at year-end. FOB destination: title and revenue transfer only at Geneva acceptance (ETA Jan 10).',
+    why: 'A $1,000,000 December invoice would misstate FY2026 revenue — and a cold-chain excursion at any of 6 hand-offs converts revenue into a spoilage write-off. The custody chain carries the re-icing and temperature evidence.',
+    action: 'Hold revenue until the Geneva proof-of-delivery with temperature acceptance; verify the Gdansk re-ice hand-off is QR-scanned on arrival.',
+  },
+  {
     id: 'FLG-02',
     severity: 'high',
     title: 'Customs valuation differs from sales invoice — document it',
@@ -355,6 +419,181 @@ export function daysBetween(fromIso: string, toIso: string): number {
   const [fy, fm, fd] = fromIso.split('-').map(Number)
   const [ty, tm, td] = toIso.split('-').map(Number)
   return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86400000)
+}
+
+// ---------------------------------------------------------------------------
+// AI vendor search (Plan tab) — precomputed route options and customs bulletins.
+// In production this would be a live AI search over carrier and customs data.
+
+export type RouteStrategy = 'fastest' | 'balanced' | 'economy'
+
+export interface RouteLeg {
+  kind: LegKind
+  vendor: string
+  location: string
+  days: number
+  rating: number
+}
+
+export interface RouteOption {
+  id: string
+  name: string
+  strategy: RouteStrategy
+  transitDays: number
+  cost: number
+  onTime: number
+  legs: RouteLeg[]
+  note?: string
+}
+
+export type PlanCountry = 'NL' | 'CA' | 'UK'
+
+export interface PlanDestination {
+  key: PlanCountry
+  city: string
+  label: string
+}
+
+export const PLAN_DESTINATIONS: PlanDestination[] = [
+  { key: 'NL', city: 'Utrecht', label: 'Utrecht, Netherlands' },
+  { key: 'CA', city: 'Toronto', label: 'Toronto, Canada' },
+  { key: 'UK', city: 'London', label: 'London, United Kingdom' },
+]
+
+export const ROUTE_OPTIONS: Record<PlanCountry, RouteOption[]> = {
+  NL: [
+    {
+      id: 'NL-AIR', name: 'Express Air', strategy: 'fastest', transitDays: 4, cost: 8400, onTime: 98,
+      legs: [
+        { kind: 'air', vendor: 'AeroSwift Cargo', location: 'Amsterdam Schiphol, Netherlands', days: 2, rating: 4.8 },
+        { kind: 'customs', vendor: 'VanderZee Customs Brokerage B.V.', location: 'Schiphol Customs, Netherlands', days: 1, rating: 4.9 },
+        { kind: 'delivery', vendor: 'Northgate Couriers', location: 'Customer site — Utrecht, Netherlands', days: 1, rating: 4.6 },
+      ],
+    },
+    {
+      id: 'NL-OCEXP', name: 'Priority Ocean', strategy: 'balanced', transitDays: 14, cost: 3900, onTime: 94,
+      legs: [
+        { kind: 'truck', vendor: 'Cascade Freight Lines', location: 'Harbor Point Boatyard, Oakland, CA, USA', days: 1, rating: 4.6 },
+        { kind: 'boatyard', vendor: 'Harbor Point Boatyard (Oakland, CA)', location: 'Port of Oakland, CA, USA', days: 1, rating: 4.4 },
+        { kind: 'ocean', vendor: 'Pacific Meridian Lines', location: 'Port of Rotterdam, Netherlands', days: 9, rating: 4.5 },
+        { kind: 'customs', vendor: 'VanderZee Customs Brokerage B.V.', location: 'Customs Zone, Rotterdam, Netherlands', days: 2, rating: 4.9 },
+        { kind: 'delivery', vendor: 'Northgate Couriers', location: 'Customer site — Utrecht, Netherlands', days: 1, rating: 4.6 },
+      ],
+    },
+    {
+      id: 'NL-OCECO', name: 'Economy Ocean', strategy: 'economy', transitDays: 21, cost: 2100, onTime: 88,
+      note: 'Misses the need-by date if customs slips more than 3 days.',
+      legs: [
+        { kind: 'truck', vendor: 'Redline Haulage Co.', location: 'Bayside Marine Terminal, Oakland, CA, USA', days: 1, rating: 4.1 },
+        { kind: 'boatyard', vendor: 'Bayside Marine Terminal (Oakland, CA)', location: 'Port of Oakland, CA, USA', days: 2, rating: 3.9 },
+        { kind: 'ocean', vendor: 'Atlantic Crown Shipping', location: 'Port of Rotterdam, Netherlands', days: 14, rating: 4.0 },
+        { kind: 'customs', vendor: 'VanderZee Customs Brokerage B.V.', location: 'Customs Zone, Rotterdam, Netherlands', days: 3, rating: 4.9 },
+        { kind: 'delivery', vendor: 'Northgate Couriers', location: 'Customer site — Utrecht, Netherlands', days: 1, rating: 4.6 },
+      ],
+    },
+  ],
+  CA: [
+    {
+      id: 'CA-AIR', name: 'Express Air', strategy: 'fastest', transitDays: 3, cost: 2900, onTime: 98,
+      legs: [
+        { kind: 'air', vendor: 'AeroSwift Cargo', location: 'Toronto Pearson, Canada', days: 1, rating: 4.8 },
+        { kind: 'customs', vendor: 'Maple Leaf Customs Brokers', location: 'Toronto Pearson, Canada', days: 1, rating: 4.7 },
+        { kind: 'delivery', vendor: 'Northgate Couriers', location: 'Customer site — Toronto, Canada', days: 1, rating: 4.6 },
+      ],
+    },
+    {
+      id: 'CA-GRND', name: 'Cross-Border Ground', strategy: 'balanced', transitDays: 6, cost: 1450, onTime: 95,
+      legs: [
+        { kind: 'truck', vendor: 'Cascade Freight Lines', location: 'Peace Bridge, Buffalo NY → Fort Erie ON', days: 4, rating: 4.6 },
+        { kind: 'customs', vendor: 'Maple Leaf Customs Brokers', location: 'Fort Erie, Canada', days: 1, rating: 4.7 },
+        { kind: 'delivery', vendor: 'Northgate Couriers', location: 'Customer site — Toronto, Canada', days: 1, rating: 4.6 },
+      ],
+    },
+    {
+      id: 'CA-LTL', name: 'Economy LTL', strategy: 'economy', transitDays: 9, cost: 780, onTime: 90,
+      legs: [
+        { kind: 'truck', vendor: 'Redline Haulage Co.', location: 'Peace Bridge, Buffalo NY → Fort Erie ON', days: 7, rating: 4.1 },
+        { kind: 'customs', vendor: 'Maple Leaf Customs Brokers', location: 'Fort Erie, Canada', days: 1, rating: 4.7 },
+        { kind: 'delivery', vendor: 'Northgate Couriers', location: 'Customer site — Toronto, Canada', days: 1, rating: 4.6 },
+      ],
+    },
+  ],
+  UK: [
+    {
+      id: 'UK-AIR', name: 'Express Air', strategy: 'fastest', transitDays: 4, cost: 7900, onTime: 97,
+      legs: [
+        { kind: 'air', vendor: 'AeroSwift Cargo', location: 'London Heathrow, United Kingdom', days: 2, rating: 4.8 },
+        { kind: 'customs', vendor: 'Thames Gate Customs Ltd.', location: 'Heathrow Customs, United Kingdom', days: 1, rating: 4.5 },
+        { kind: 'delivery', vendor: 'Northgate Couriers', location: 'Customer site — London, United Kingdom', days: 1, rating: 4.6 },
+      ],
+    },
+    {
+      id: 'UK-OCEXP', name: 'Priority Ocean', strategy: 'balanced', transitDays: 17, cost: 3600, onTime: 92,
+      legs: [
+        { kind: 'truck', vendor: 'Cascade Freight Lines', location: 'Harbor Point Boatyard, Oakland, CA, USA', days: 1, rating: 4.6 },
+        { kind: 'boatyard', vendor: 'Harbor Point Boatyard (Oakland, CA)', location: 'Port of Oakland, CA, USA', days: 1, rating: 4.4 },
+        { kind: 'ocean', vendor: 'Pacific Meridian Lines', location: 'Port of Felixstowe, United Kingdom', days: 11, rating: 4.5 },
+        { kind: 'port', vendor: 'Albion Port Services (Felixstowe)', location: 'Port of Felixstowe, United Kingdom', days: 1, rating: 4.3 },
+        { kind: 'customs', vendor: 'Thames Gate Customs Ltd.', location: 'Felixstowe Customs, United Kingdom', days: 2, rating: 4.5 },
+        { kind: 'delivery', vendor: 'Northgate Couriers', location: 'Customer site — London, United Kingdom', days: 1, rating: 4.6 },
+      ],
+    },
+    {
+      id: 'UK-OCECO', name: 'Economy Ocean', strategy: 'economy', transitDays: 23, cost: 1950, onTime: 86,
+      note: 'Tight against most need-by dates — buffer for UKCA document review.',
+      legs: [
+        { kind: 'truck', vendor: 'Redline Haulage Co.', location: 'Bayside Marine Terminal, Oakland, CA, USA', days: 1, rating: 4.1 },
+        { kind: 'boatyard', vendor: 'Bayside Marine Terminal (Oakland, CA)', location: 'Port of Oakland, CA, USA', days: 2, rating: 3.9 },
+        { kind: 'ocean', vendor: 'Atlantic Crown Shipping', location: 'Port of Felixstowe, United Kingdom', days: 16, rating: 4.0 },
+        { kind: 'port', vendor: 'Albion Port Services (Felixstowe)', location: 'Port of Felixstowe, United Kingdom', days: 1, rating: 4.3 },
+        { kind: 'customs', vendor: 'Thames Gate Customs Ltd.', location: 'Felixstowe Customs, United Kingdom', days: 2, rating: 4.5 },
+        { kind: 'delivery', vendor: 'Northgate Couriers', location: 'Customer site — London, United Kingdom', days: 1, rating: 4.6 },
+      ],
+    },
+  ],
+}
+
+export interface CustomsUpdate {
+  country: PlanCountry
+  date: string
+  kind: 'new' | 'change'
+  title: string
+  detail: string
+}
+
+export const CUSTOMS_UPDATES: CustomsUpdate[] = [
+  {
+    country: 'NL', date: '2026-12-01', kind: 'change',
+    title: 'EU CBAM scope expanded to electronics housings',
+    detail: 'Electronics with embedded aluminum housings now need an embedded-emissions declaration at import. Applies to ValeEdge E2 enclosures.',
+  },
+  {
+    country: 'NL', date: '2026-11-14', kind: 'new',
+    title: 'Rotterdam requests valuation worksheets up front',
+    detail: 'When declared value uses a price list instead of the sales invoice, the valuation worksheet is now requested at filing — not on follow-up.',
+  },
+  {
+    country: 'CA', date: '2026-10-20', kind: 'change',
+    title: 'CARM release 3 changes importer billing',
+    detail: 'Duties are billed through the importer’s CARM portal; broker security bonds no longer cover first-time importers.',
+  },
+  {
+    country: 'UK', date: '2026-12-15', kind: 'new',
+    title: 'UKCA marking grace period ends Jan 1',
+    detail: 'CE-only markings are no longer accepted for security electronics — shipments need the UKCA declaration in the customs pack.',
+  },
+]
+
+export const PRODUCT_SERIAL_PREFIX: Record<string, string> = {
+  'ValeEdge E2': 'VE-E2',
+  'PerimeterOne P4': 'PO-P4',
+  'SkyWatch S1 Dock': 'SW-S1',
+}
+
+export function addDays(iso: string, n: number): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d + n))
+  return dt.toISOString().slice(0, 10)
 }
 
 export function legLabel(kind: LegKind): string {

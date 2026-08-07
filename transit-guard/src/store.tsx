@@ -2,9 +2,15 @@ import { createContext, useContext, useReducer, type ReactNode, type Dispatch } 
 import {
   SEED_SHIPMENTS,
   DEMO_TODAY,
+  CUSTOMS_REQUIREMENTS,
+  PRODUCTS,
+  PRODUCT_SERIAL_PREFIX,
+  addDays,
   type Shipment,
   type Leg,
   type LegKind,
+  type RouteOption,
+  type PlanCountry,
 } from './data/seed'
 
 export interface ScanEvent {
@@ -21,7 +27,18 @@ export interface State {
   toast: string | null
 }
 
+export interface ApplyRoutePayload {
+  txId: string
+  route: RouteOption
+  country: PlanCountry
+  city: string
+  product: string
+  unitCount: number
+  customer: string
+}
+
 export type Action =
+  | { type: 'APPLY_ROUTE'; payload: ApplyRoutePayload; toast: string }
   | { type: 'LOG_SCAN'; scan: ScanEvent; toast: string }
   | { type: 'ADD_LEG'; txId: string; leg: Omit<Leg, 'id' | 'status'>; toast: string }
   | { type: 'COMPLETE_ACTIVE_LEG'; txId: string; date: string }
@@ -38,8 +55,72 @@ function reverseKind(kind: LegKind): LegKind {
   return kind
 }
 
+function buildRouteShipment(p: ApplyRoutePayload): Shipment {
+  const prod = PRODUCTS[p.product]
+  const prefix = PRODUCT_SERIAL_PREFIX[p.product] ?? 'FI-XX'
+  const reqs = CUSTOMS_REQUIREMENTS[p.country] ?? []
+  let cursor = DEMO_TODAY
+  const routeLegs: Leg[] = p.route.legs.map((rl, i) => {
+    cursor = addDays(cursor, rl.days)
+    return {
+      id: `LX-${legSeq++}`,
+      kind: rl.kind,
+      vendor: rl.vendor,
+      location: rl.location,
+      date: null,
+      eta: cursor,
+      status: 'pending',
+      docs:
+        rl.kind === 'customs'
+          ? reqs.map((r) => ({ name: r.doc, ready: false }))
+          : [{ name: rl.kind === 'delivery' ? 'Proof of Delivery' : 'Hand-off receipt', ready: false }],
+      note: i === 0 ? `AI route "${p.route.name}" — vendor rating ${rl.rating.toFixed(1)}` : undefined,
+    }
+  })
+  return {
+    txId: p.txId,
+    direction: 'outbound',
+    product: p.product,
+    unitCount: p.unitCount,
+    serialsSample: Array.from({ length: Math.min(p.unitCount, 3) }, (_, i) => `${prefix}-${2401 + i}`),
+    customer: p.customer,
+    destination: `${p.city}, ${p.country === 'NL' ? 'Netherlands' : p.country === 'CA' ? 'Canada' : 'United Kingdom'}`,
+    country: p.country,
+    incoterms: `DAP ${p.city}`,
+    salesValue: (prod?.salesUnit ?? 0) * p.unitCount,
+    customsValue: (prod?.customsUnit ?? 0) * p.unitCount,
+    legs: [
+      {
+        id: `LX-${legSeq++}`,
+        kind: 'pick',
+        vendor: 'Fast Insights WH-RNO-2 (Reno, NV)',
+        location: 'WH-RNO-2, Reno, NV, USA',
+        date: null,
+        eta: DEMO_TODAY,
+        status: 'active',
+        docs: [{ name: 'Pick List', ready: false }],
+        note: 'Created from AI vendor search',
+      },
+      {
+        id: `LX-${legSeq++}`,
+        kind: 'outbound',
+        vendor: 'Fast Insights WH-RNO-2 (Reno, NV)',
+        location: 'WH-RNO-2, Reno, NV, USA',
+        date: null,
+        eta: DEMO_TODAY,
+        status: 'pending',
+        docs: [{ name: 'Bill of Lading', ready: false }],
+      },
+      ...routeLegs,
+    ],
+  }
+}
+
 function reducer(state: State, action: Action): State {
   switch (action.type) {
+    case 'APPLY_ROUTE':
+      if (state.shipments.some((s) => s.txId === action.payload.txId)) return { ...state, toast: action.toast }
+      return { ...state, toast: action.toast, shipments: [buildRouteShipment(action.payload), ...state.shipments] }
     case 'LOG_SCAN':
       return { ...state, scans: [action.scan, ...state.scans], toast: action.toast }
     case 'ADD_LEG':

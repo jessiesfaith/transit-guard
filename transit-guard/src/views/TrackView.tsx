@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import QRCode from 'qrcode'
 import { useI18n } from '../i18n'
 import { useStore } from '../store'
 import {
@@ -86,6 +87,32 @@ export default function TrackView({
   )
 }
 
+function QrPanel({ s }: { s: Shipment }) {
+  const { t } = useI18n()
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const leg = activeLeg(s)
+  useEffect(() => {
+    if (canvasRef.current && leg) {
+      QRCode.toCanvas(canvasRef.current, `TG1|${s.txId}|${leg.id}|${leg.kind}`, {
+        width: 104,
+        margin: 1,
+        color: { dark: '#0f172a', light: '#ffffff' },
+      }).catch(() => {})
+    }
+  }, [s.txId, leg])
+  if (!leg) return null
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-3.5 flex items-center gap-3">
+      <canvas ref={canvasRef} className="rounded-lg border border-slate-100 shrink-0" />
+      <div className="min-w-0">
+        <p className="text-xs font-bold text-slate-800">{t('qrTitle')}</p>
+        <p className="text-[10px] text-slate-500 leading-relaxed mt-0.5">{t('qrHint')}</p>
+        <p className="font-mono text-[10px] font-bold text-emerald-700 mt-1">{s.txId} · {legLabel(leg.kind)}</p>
+      </div>
+    </div>
+  )
+}
+
 function Detail({ s, onBack, onOpenTx }: { s: Shipment; onBack: () => void; onOpenTx: (tx: string) => void }) {
   const { t } = useI18n()
   const { state, dispatch } = useStore()
@@ -143,7 +170,18 @@ function Detail({ s, onBack, onOpenTx }: { s: Shipment; onBack: () => void; onOp
           {s.incoterms && <span className="text-slate-400">{t('incoterms')}: <span className="text-white font-semibold">{s.incoterms}</span></span>}
           {s.invoice && <span className="text-slate-400">{t('invoiceLbl')}: <span className="text-white font-semibold">{s.invoice.id} · {fmtDate(s.invoice.date)}</span></span>}
         </div>
+        {s.special && s.special.length > 0 && (
+          <div className="flex flex-wrap gap-1 pt-1.5">
+            {s.special.map((c) => (
+              <span key={c} className="text-[9px] font-bold uppercase rounded-full bg-sky-900/80 border border-sky-500/50 text-sky-200 px-2 py-0.5">
+                ❄ {c}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
+
+      {s.country !== 'US' && s.country !== 'CA' && <QrPanel s={s} />}
 
       <div>
         <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">{t('custodyChain')}</h3>
@@ -163,7 +201,14 @@ function Detail({ s, onBack, onOpenTx }: { s: Shipment; onBack: () => void; onOp
                 />
                 <div className={`rounded-xl border p-3 ${leg.status === 'active' ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-white'}`}>
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold text-slate-800">{legLabel(leg.kind)}</p>
+                    <p className="text-xs font-bold text-slate-800">
+                      {legLabel(leg.kind)}
+                      {leg.via && (
+                        <span className="ml-1.5 text-[8px] font-bold uppercase rounded-full bg-indigo-100 text-indigo-700 px-1.5 py-0.5 align-middle">
+                          ⇄ {t('viaApi')}
+                        </span>
+                      )}
+                    </p>
                     <p className="text-[10px] font-medium text-slate-500">
                       {leg.date ? fmtDate(leg.date) : `${t('eta')} ${fmtDate(leg.eta)}`}
                     </p>
