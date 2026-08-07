@@ -283,7 +283,7 @@ function Detail({ s, onBack, onOpenTx }: { s: Shipment; onBack: () => void; onOp
                       </button>
                     ) : (
                       <button
-                        onClick={() => downloadDocsPack(s, leg, false)}
+                        onClick={() => downloadDocsPack(s, leg)}
                         className="text-[9px] font-bold rounded-lg bg-slate-900 text-white px-2 py-1"
                       >
                         📄 {t('shippingDocs')}

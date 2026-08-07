@@ -59,76 +59,16 @@ function sectionTitle(doc: jsPDF, y: number, text: string): void {
   doc.setTextColor(...INK)
 }
 
-export function buildDocsPack(doc: jsPDF, s: Shipment, leg: Leg, includeCustoms = true): jsPDF {
+/** Shipping documents only — packing slip + bill of lading. Customs docs live in buildCustomsPack. */
+export function buildDocsPack(doc: jsPDF, s: Shipment, leg: Leg): jsPDF {
   const prod = PRODUCTS[s.product]
-  const unitCustoms = prod?.customsUnit ?? 0
-  const declared = s.customsValue ?? unitCustoms * s.unitCount
   let pageNum = 0
-  const totalPages = includeCustoms ? 4 : 2
+  const totalPages = 2
   const startPage = () => {
     if (pageNum > 0) doc.addPage()
     pageNum += 1
   }
   let y = 40
-
-  // ----- Customs valuation worksheet — customs paperwork, only when unlocked
-  if (includeCustoms) {
-  startPage()
-  pageHeader(doc, 'CUSTOMS VALUATION WORKSHEET — COMPANY APPROVED', s)
-  y = 40
-  kv(doc, M, y, 'Exporter', 'Fast Insights, Inc. — Reno, NV, USA')
-  kv(doc, 115, y, 'Consignee', s.customer)
-  y += 16
-  kv(doc, M, y, 'Destination', s.destination)
-  kv(doc, 115, y, 'Incoterms', s.incoterms ?? '—')
-  y += 16
-  kv(doc, M, y, 'Valuation method', 'Transaction value — company customs price list')
-  kv(doc, 115, y, 'HS code', prod?.hs ?? '—')
-  y += 18
-  sectionTitle(doc, y, 'Declared value computation')
-  y += 7
-  doc.setFontSize(10)
-  doc.setFont('helvetica', 'normal')
-  const rows: [string, string][] = [
-    ['Product', s.product],
-    ['Quantity', `${s.unitCount} units`],
-    ['Customs price list / unit', fmtUsd(unitCustoms)],
-    ['Declared customs value', fmtUsd(declared)],
-    ['Sales invoice value (reference)', fmtUsd(s.salesValue)],
-    ['Variance to be documented', fmtUsd(s.salesValue - declared)],
-  ]
-  rows.forEach(([k, v], i) => {
-    const ry = y + i * 8
-    if (i % 2 === 0) {
-      doc.setFillColor(241, 245, 249)
-      doc.rect(M, ry - 5, W - 2 * M, 8, 'F')
-    }
-    doc.setFont('helvetica', 'normal')
-    doc.text(k, M + 2, ry)
-    doc.setFont('helvetica', 'bold')
-    doc.text(v, W - M - 2, ry, { align: 'right' })
-  })
-  y += rows.length * 8 + 10
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(9)
-  doc.setTextColor(...SLATE)
-  doc.text(
-    doc.splitTextToSize(
-      'The declared customs value follows the company customs price list under the transaction-value method. The variance from the sales invoice is expected and documented here for the customs broker and for audit. This worksheet is generated from custody events recorded in Transit Guard.',
-      W - 2 * M,
-    ),
-    M,
-    y,
-  )
-  y += 22
-  doc.setTextColor(...INK)
-  doc.setFontSize(10)
-  doc.text('Approved: ____________________________', M, y)
-  doc.setFontSize(8.5)
-  doc.setTextColor(...SLATE)
-  doc.text('J. Dougherty, Controller — Fast Insights, Inc. · Approval on file in Transit Guard', M, y + 5)
-  pageFooter(doc, s, `Customs Valuation Worksheet · Page ${pageNum} of ${totalPages}`)
-  }
 
   // ----- Packing Slip
   startPage()
@@ -213,47 +153,13 @@ export function buildDocsPack(doc: jsPDF, s: Shipment, leg: Leg, includeCustoms 
   doc.text('Signatures are captured digitally at label scan in the carrier add-in.', M, y + 6)
   pageFooter(doc, s, `Bill of Lading · Page ${pageNum} of ${totalPages}`)
 
-  // ----- Required customs documents checklist — customs paperwork, only when unlocked
-  if (includeCustoms) {
-  startPage()
-  pageHeader(doc, 'REQUIRED CUSTOMS DOCUMENTS — DESTINATION CHECKLIST', s)
-  y = 40
-  const reqs = CUSTOMS_REQUIREMENTS[s.country] ?? []
-  sectionTitle(doc, y, `Destination: ${s.destination}`)
-  y += 9
-  reqs.forEach((r, i) => {
-    const ry = y + i * 14
-    doc.setDrawColor(...EMERALD)
-    doc.rect(M, ry - 4, 5, 5)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
-    doc.setTextColor(...INK)
-    doc.text(r.doc, M + 9, ry)
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8.5)
-    doc.setTextColor(...SLATE)
-    doc.text(doc.splitTextToSize(r.desc, W - 2 * M - 9), M + 9, ry + 4.5)
-  })
-  y += reqs.length * 14 + 8
-  doc.setFontSize(9)
-  doc.setTextColor(...SLATE)
-  doc.text(
-    doc.splitTextToSize(
-      'Checklist state is live in Transit Guard: documents marked ready in the app satisfy this list, and the customs leg cannot complete until every box is checked. Requirement changes are monitored by the Transit Guard AI (customs bulletins).',
-      W - 2 * M,
-    ),
-    M,
-    y,
-  )
-  pageFooter(doc, s, `Customs Checklist · Page ${pageNum} of ${totalPages}`)
-  }
   return doc
 }
 
-export function downloadDocsPack(s: Shipment, leg: Leg, includeCustoms = true): void {
+export function downloadDocsPack(s: Shipment, leg: Leg): void {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
-  buildDocsPack(doc, s, leg, includeCustoms)
-  doc.save(`${s.txId}_${includeCustoms ? 'docs_pack' : 'shipping_docs'}.pdf`)
+  buildDocsPack(doc, s, leg)
+  doc.save(`${s.txId}_shipping_docs.pdf`)
 }
 
 const INCOTERM_TERMS: [string, string][] = [
@@ -380,5 +286,5 @@ export function buildCustomsPack(doc: jsPDF, s: Shipment): jsPDF {
 export function downloadCustomsPack(s: Shipment): void {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   buildCustomsPack(doc, s)
-  doc.save(`${s.txId}_customs_pack_demo.pdf`)
+  doc.save(`${s.txId}_customs_docs.pdf`)
 }

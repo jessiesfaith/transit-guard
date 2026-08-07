@@ -95,7 +95,7 @@ export function JobsView() {
                 {l.docsPack && (
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                     <button
-                      onClick={() => downloadDocsPack(s, l, false)}
+                      onClick={() => downloadDocsPack(s, l)}
                       className="text-[10px] font-bold rounded-lg bg-slate-900 text-white px-2.5 py-1.5"
                     >
                       📄 {t('shippingDocs')}
