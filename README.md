@@ -1,5 +1,7 @@
 # Inventory Close Guard
 
+> **🚚 Here for the hackathon?** The Transit Guard demo lives in [`transit-guard/`](transit-guard) — see [Sibling App: Transit Guard](#sibling-app-transit-guard) below for the feature tour, the pitch deck is in [`deck/`](deck), and the EverOS agent prompt is in [`docs/EVEROS_AGENT_PROMPT.md`](docs/EVEROS_AGENT_PROMPT.md). Run it: `npm install --prefix transit-guard && npm run dev --prefix transit-guard` → http://localhost:5174
+
 ### Every serial. One accounting truth.
 
 **The materiality-aware year-end inventory close agent** — a hackathon prototype built for **Fast Insights**, a fictional Series B physical-AI company.
