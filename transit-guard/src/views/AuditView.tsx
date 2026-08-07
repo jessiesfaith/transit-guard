@@ -178,6 +178,9 @@ export default function AuditView() {
         <p className="text-[10px] text-slate-400">{t('ocrNote')}</p>
       </div>
 
+      <p className="text-[10px] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 leading-relaxed text-center">
+        {t('goalNote')}
+      </p>
       <p className="text-[10px] text-slate-400 text-center">{t('demoDate')}</p>
     </div>
   )

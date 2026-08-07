@@ -7,8 +7,9 @@ import TrackView from './views/TrackView'
 import CustomsView from './views/CustomsView'
 import FlagsView from './views/FlagsView'
 import AuditView from './views/AuditView'
+import { OffersView, JobsView, VendorScanView } from './views/VendorViews'
 
-type Tab = 'scan' | 'plan' | 'track' | 'customs' | 'flags' | 'audit'
+type Tab = 'scan' | 'plan' | 'track' | 'customs' | 'flags' | 'audit' | 'offers' | 'jobs'
 
 function TabIcon({ tab }: { tab: Tab }) {
   const paths: Record<Tab, string> = {
@@ -18,6 +19,8 @@ function TabIcon({ tab }: { tab: Tab }) {
     customs: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c2.5 2.5 3.5 5.5 3.5 9s-1 6.5-3.5 9c-2.5-2.5-3.5-5.5-3.5-9s1-6.5 3.5-9z',
     flags: 'M5 21V4M5 4h12l-2.5 4L17 12H5',
     audit: 'M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3zM9 12l2 2 4-4',
+    offers: 'M2 12h5l2 3h6l2-3h5M4.5 5h15L22 12v7H2v-7l2.5-7z',
+    jobs: 'M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 7h18v13H3V7zM3 12h18',
   }
   return (
     <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -45,15 +48,24 @@ function Toast() {
 
 function Phone() {
   const { t, lang, setLang } = useI18n()
+  const { state, dispatch } = useStore()
   const [tab, setTab] = useState<Tab>('scan')
   const [selectedTx, setSelectedTx] = useState<string | null>(null)
+  const role = state.role
 
   function openTx(txId: string) {
     setSelectedTx(txId)
     setTab('track')
   }
 
-  const tabs: { key: Tab; label: string }[] = [
+  function switchRole(next: 'company' | 'vendor') {
+    if (next === role) return
+    dispatch({ type: 'SET_ROLE', role: next })
+    setSelectedTx(null)
+    setTab(next === 'company' ? 'scan' : 'offers')
+  }
+
+  const companyTabs: { key: Tab; label: string }[] = [
     { key: 'scan', label: t('navScan') },
     { key: 'plan', label: t('navPlan') },
     { key: 'track', label: t('navTrack') },
@@ -61,6 +73,12 @@ function Phone() {
     { key: 'flags', label: t('navFlags') },
     { key: 'audit', label: t('navAudit') },
   ]
+  const vendorTabs: { key: Tab; label: string }[] = [
+    { key: 'offers', label: t('navOffers') },
+    { key: 'jobs', label: t('navJobs') },
+    { key: 'scan', label: t('navScan') },
+  ]
+  const tabs = role === 'company' ? companyTabs : vendorTabs
 
   return (
     <div className="relative w-[390px] max-w-full h-[800px] max-h-[94vh] bg-slate-50 rounded-[2.5rem] border-[10px] border-slate-900 shadow-2xl shadow-black/50 overflow-hidden flex flex-col">
@@ -73,9 +91,11 @@ function Phone() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-base font-black tracking-tight">
-              {t('appName')} <span className="text-emerald-400">·</span>
+              {t('appName')} <span className={role === 'company' ? 'text-emerald-400' : 'text-indigo-400'}>·</span>
             </h1>
-            <p className="text-[9px] text-slate-400 uppercase tracking-widest">{t('suite')} — {t('tagline')}</p>
+            <p className="text-[9px] text-slate-400 uppercase tracking-widest">
+              {role === 'company' ? `${t('suite')} — ${t('tagline')}` : `${state.vendorName} — ${t('vendorTagline')}`}
+            </p>
           </div>
           <div className="flex gap-1">
             {LANGS.map((l) => (
@@ -89,15 +109,39 @@ function Phone() {
             ))}
           </div>
         </div>
+        <div className="flex gap-1 mt-2">
+          <button
+            onClick={() => switchRole('company')}
+            className={`flex-1 text-[10px] font-bold rounded-lg px-2 py-1.5 ${role === 'company' ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-400'}`}
+          >
+            🏢 {t('roleCompany')}
+          </button>
+          <button
+            onClick={() => switchRole('vendor')}
+            className={`flex-1 text-[10px] font-bold rounded-lg px-2 py-1.5 ${role === 'vendor' ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-400'}`}
+          >
+            🚚 {t('roleVendor')} — {state.vendorName.split(' ')[0]}
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto phone-scroll">
-        {tab === 'scan' && <ScanView onOpenTx={openTx} />}
-        {tab === 'plan' && <PlanView onOpenTx={openTx} />}
-        {tab === 'track' && <TrackView selectedTx={selectedTx} setSelectedTx={setSelectedTx} />}
-        {tab === 'customs' && <CustomsView />}
-        {tab === 'flags' && <FlagsView onOpenTx={openTx} />}
-        {tab === 'audit' && <AuditView />}
+        {role === 'company' ? (
+          <>
+            {tab === 'scan' && <ScanView onOpenTx={openTx} />}
+            {tab === 'plan' && <PlanView onOpenTx={openTx} />}
+            {tab === 'track' && <TrackView selectedTx={selectedTx} setSelectedTx={setSelectedTx} />}
+            {tab === 'customs' && <CustomsView />}
+            {tab === 'flags' && <FlagsView onOpenTx={openTx} />}
+            {tab === 'audit' && <AuditView />}
+          </>
+        ) : (
+          <>
+            {tab === 'offers' && <OffersView />}
+            {tab === 'jobs' && <JobsView />}
+            {tab === 'scan' && <VendorScanView />}
+          </>
+        )}
         <div className="h-4" />
       </div>
 
@@ -151,6 +195,8 @@ function SidePanels({ children }: { children: React.ReactNode }) {
             <li><b className="text-slate-200">Plan</b> — AI vendor search: Utrecht, need-by Jan 12 → ranked routes + customs bulletins → Apply → new chain appears in Track.</li>
             <li><b className="text-slate-200">Track</b> — open TX-20481: warehouse → truck → boatyard → ocean → Rotterdam → customs. Add a hand-off with dropdowns.</li>
             <li><b className="text-slate-200">$1M lane</b> — open TX-20499: Palo Alto → New York → ocean → UK → Poland → Geneva. Perishable −2 °C, dry ice re-icing, FOB destination, EU hand-off QR, partner-API legs.</li>
+            <li><b className="text-slate-200">Docs pack</b> — on a proposed vendor leg, tap "Docs pack (PDF)": company-approved valuation worksheet + packing slip + BOL. Status stays "in progress" until the carrier scans the label.</li>
+            <li><b className="text-slate-200">Carrier add-in</b> — switch profile (🚚): accept the AI-proposed load in Offers (Uber-style), then Scan the label — pickup receives the docs pack; the second scan shows a different carrier taking a load and the chain auto-updating.</li>
             <li><b className="text-slate-200">Customs</b> — doc checklist + customs price list vs. sales invoice ($147K vs $186K).</li>
             <li><b className="text-slate-200">Flags</b> — $186K DAP cutoff risk, RMA accrual, Dec-vs-Jan tax timing.</li>
             <li><b className="text-slate-200">Audit</b> — count snapshot, CSV export, run OCR on the sample doc (ES/FR/EN) and attach it.</li>

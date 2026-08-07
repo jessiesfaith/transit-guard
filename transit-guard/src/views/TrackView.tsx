@@ -15,6 +15,7 @@ import {
   type Shipment,
   type LegKind,
 } from '../data/seed'
+import { downloadDocsPack } from '../docsPdf'
 
 function DirectionBadge({ s }: { s: Shipment }) {
   const { t } = useI18n()
@@ -165,6 +166,9 @@ function Detail({ s, onBack, onOpenTx }: { s: Shipment; onBack: () => void; onOp
           {s.unitCount > s.serialsSample.length ? ` +${s.unitCount - s.serialsSample.length}` : ''}
         </p>
         <p className="text-xs text-slate-300">{s.customer} → {s.destination}</p>
+        {s.orderNo && (
+          <p className="text-[11px] text-slate-400">{t('orderNo')}: <span className="font-mono font-bold text-white">{s.orderNo}</span></p>
+        )}
         <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-[11px]">
           <span className="text-slate-400">{t('value')}: <span className="text-white font-semibold">{fmtUsd(s.salesValue)}</span></span>
           {s.incoterms && <span className="text-slate-400">{t('incoterms')}: <span className="text-white font-semibold">{s.incoterms}</span></span>}
@@ -225,6 +229,33 @@ function Detail({ s, onBack, onOpenTx }: { s: Shipment; onBack: () => void; onOp
                           {d.ready ? '✓' : '…'} {d.name}
                         </span>
                       ))}
+                    </div>
+                  )}
+                  {(leg.accept || leg.docsPack) && (
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                      {leg.accept === 'contacting' && (
+                        <span className="text-[9px] font-semibold rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 px-2 py-0.5 animate-pulse">
+                          ⏳ {t('agentContacting')}
+                        </span>
+                      )}
+                      {leg.accept === 'accepted' && (
+                        <span className="text-[9px] font-semibold rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-0.5">
+                          ✓ {t('acceptedBy')}
+                        </span>
+                      )}
+                      {leg.docsPack && (
+                        <>
+                          <button
+                            onClick={() => downloadDocsPack(s, leg)}
+                            className="text-[9px] font-bold rounded-lg bg-slate-900 text-white px-2 py-1"
+                          >
+                            📄 {t('docsPack')}
+                          </button>
+                          <span className={`text-[9px] font-semibold rounded-full border px-2 py-0.5 ${leg.docsPack === 'received' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-amber-50 border-amber-300 text-amber-700'}`}>
+                            {leg.docsPack === 'received' ? `✓ ${t('docsReceived')}` : `… ${t('docsInProgress')}`}
+                          </span>
+                        </>
+                      )}
                     </div>
                   )}
                   {leg.note && <p className="text-[10px] italic text-slate-400 mt-1">{leg.note}</p>}

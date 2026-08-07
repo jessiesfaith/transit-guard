@@ -1,6 +1,9 @@
 import { createContext, useContext, useReducer, type ReactNode, type Dispatch } from 'react'
 import {
   SEED_SHIPMENTS,
+  SEED_OFFERS,
+  COMPANY_VENDOR,
+  VENDORS,
   DEMO_TODAY,
   CUSTOMS_REQUIREMENTS,
   PRODUCTS,
@@ -11,7 +14,12 @@ import {
   type LegKind,
   type RouteOption,
   type PlanCountry,
+  type Offer,
 } from './data/seed'
+
+export type Role = 'company' | 'vendor'
+
+const TRANSPORT_KINDS: LegKind[] = ['truck', 'boatyard', 'ocean', 'air', 'port', 'courier']
 
 export interface ScanEvent {
   serial: string
@@ -24,6 +32,9 @@ export interface ScanEvent {
 export interface State {
   shipments: Shipment[]
   scans: ScanEvent[]
+  offers: Offer[]
+  role: Role
+  vendorName: string
   toast: string | null
 }
 
@@ -38,6 +49,10 @@ export interface ApplyRoutePayload {
 }
 
 export type Action =
+  | { type: 'SET_ROLE'; role: Role }
+  | { type: 'ACCEPT_OFFER'; offerId: string; toast: string }
+  | { type: 'DECLINE_OFFER'; offerId: string; toast: string }
+  | { type: 'VENDOR_LABEL_SCAN'; txId: string; vendor: string; mode: 'pickup' | 'substitute'; toast: string }
   | { type: 'APPLY_ROUTE'; payload: ApplyRoutePayload; toast: string }
   | { type: 'LOG_SCAN'; scan: ScanEvent; toast: string }
   | { type: 'ADD_LEG'; txId: string; leg: Omit<Leg, 'id' | 'status'>; toast: string }
@@ -60,8 +75,12 @@ function buildRouteShipment(p: ApplyRoutePayload): Shipment {
   const prefix = PRODUCT_SERIAL_PREFIX[p.product] ?? 'FI-XX'
   const reqs = CUSTOMS_REQUIREMENTS[p.country] ?? []
   let cursor = DEMO_TODAY
+  let firstTransport = true
   const routeLegs: Leg[] = p.route.legs.map((rl, i) => {
     cursor = addDays(cursor, rl.days)
+    const isTransport = TRANSPORT_KINDS.includes(rl.kind)
+    const docsPack = isTransport && firstTransport ? ('in-progress' as const) : undefined
+    if (isTransport && firstTransport) firstTransport = false
     return {
       id: `LX-${legSeq++}`,
       kind: rl.kind,
@@ -70,6 +89,8 @@ function buildRouteShipment(p: ApplyRoutePayload): Shipment {
       date: null,
       eta: cursor,
       status: 'pending',
+      accept: isTransport ? ('contacting' as const) : undefined,
+      docsPack,
       docs:
         rl.kind === 'customs'
           ? reqs.map((r) => ({ name: r.doc, ready: false }))
@@ -80,6 +101,7 @@ function buildRouteShipment(p: ApplyRoutePayload): Shipment {
   return {
     txId: p.txId,
     direction: 'outbound',
+    orderNo: `ORD-${p.txId.replace(/\D/g, '').slice(-5)}`,
     product: p.product,
     unitCount: p.unitCount,
     serialsSample: Array.from({ length: Math.min(p.unitCount, 3) }, (_, i) => `${prefix}-${2401 + i}`),
@@ -118,6 +140,96 @@ function buildRouteShipment(p: ApplyRoutePayload): Shipment {
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
+    case 'SET_ROLE':
+      return { ...state, role: action.role, toast: null }
+    case 'ACCEPT_OFFER': {
+      const offer = state.offers.find((o) => o.id === action.offerId)
+      if (!offer || offer.status !== 'offered') return state
+      const newLeg: Leg = {
+        id: `LX-${legSeq++}`,
+        kind: offer.kind,
+        vendor: offer.vendor,
+        location: offer.to,
+        date: null,
+        eta: addDays(offer.pickup, 3),
+        status: 'pending',
+        accept: 'accepted',
+        docsPack: 'in-progress',
+        docs: [{ name: 'Hand-off receipt', ready: false }],
+        note: 'Accepted via carrier add-in — matched by the Transit Guard agent',
+      }
+      return {
+        ...state,
+        toast: action.toast,
+        offers: state.offers.map((o) => (o.id === offer.id ? { ...o, status: 'accepted' as const } : o)),
+        shipments: state.shipments.map((s) => (s.txId === offer.txId ? { ...s, legs: [...s.legs, newLeg] } : s)),
+      }
+    }
+    case 'DECLINE_OFFER':
+      return {
+        ...state,
+        toast: action.toast,
+        offers: state.offers.map((o) => (o.id === action.offerId ? { ...o, status: 'declined' as const } : o)),
+      }
+    case 'VENDOR_LABEL_SCAN':
+      return {
+        ...state,
+        toast: action.toast,
+        offers: state.offers.map((o) =>
+          o.txId === action.txId && o.vendor === action.vendor && o.status === 'offered' ? { ...o, status: 'accepted' as const } : o,
+        ),
+        shipments: state.shipments.map((s) => {
+          if (s.txId !== action.txId) return s
+          if (action.mode === 'substitute') {
+            // Prefer legs the scanning carrier can actually run (kind matches its capabilities).
+            const capabilities = VENDORS.find((v) => v.name === action.vendor)?.kinds ?? TRANSPORT_KINDS
+            const eligible = (l: Leg) =>
+              l.status !== 'complete' && TRANSPORT_KINDS.includes(l.kind) && l.vendor !== action.vendor
+            const preferred = s.legs.find((l) => eligible(l) && capabilities.includes(l.kind))
+            const targetId = (preferred ?? s.legs.find(eligible))?.id
+            let done = false
+            return {
+              ...s,
+              legs: s.legs.map((l) => {
+                if (!done && l.id === targetId) {
+                  done = true
+                  return {
+                    ...l,
+                    vendor: action.vendor,
+                    accept: 'accepted' as const,
+                    docsPack: 'received' as const,
+                    via: 'Label scan',
+                    note: `Vendor auto-updated from label scan — plan had ${l.vendor}`,
+                  }
+                }
+                return l
+              }),
+            }
+          }
+          // pickup: close the active leg, activate (or create) this carrier's leg, mark docs received
+          let legs = s.legs.map((l) => (l.status === 'active' ? { ...l, status: 'complete' as const, date: l.date ?? DEMO_TODAY } : l))
+          let idx = legs.findIndex((l) => l.status === 'pending' && l.vendor === action.vendor)
+          if (idx === -1) {
+            legs = [
+              ...legs,
+              {
+                id: `LX-${legSeq++}`,
+                kind: 'truck' as const,
+                vendor: action.vendor,
+                location: s.destination,
+                date: null,
+                status: 'pending' as const,
+                docs: [{ name: 'Hand-off receipt', ready: false }],
+              },
+            ]
+            idx = legs.length - 1
+          }
+          legs = legs.map((l, i) =>
+            i === idx ? { ...l, status: 'active' as const, accept: 'accepted' as const, docsPack: 'received' as const, via: 'Label scan' } : l,
+          )
+          return { ...s, legs }
+        }),
+      }
     case 'APPLY_ROUTE':
       if (state.shipments.some((s) => s.txId === action.payload.txId)) return { ...state, toast: action.toast }
       return { ...state, toast: action.toast, shipments: [buildRouteShipment(action.payload), ...state.shipments] }
@@ -244,6 +356,9 @@ function reducer(state: State, action: Action): State {
 
 const initialState: State = {
   shipments: SEED_SHIPMENTS,
+  offers: SEED_OFFERS,
+  role: 'company',
+  vendorName: COMPANY_VENDOR,
   scans: [
     { serial: 'VE-E2-2203', product: 'ValeEdge E2', txId: 'TX-20481', purpose: 'External — customer sale', at: '2026-12-16' },
     { serial: 'SW-S1-1104', product: 'SkyWatch S1 Dock', txId: 'TX-20461', purpose: 'External — customer sale', at: '2026-12-19' },

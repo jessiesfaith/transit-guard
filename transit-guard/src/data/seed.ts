@@ -23,6 +23,12 @@ export interface LegDoc {
   ready: boolean
 }
 
+/** Carrier-acceptance state for a proposed leg — the Uber-style match loop. */
+export type AcceptState = 'contacting' | 'accepted' | 'declined'
+
+/** Company-approved document pack: in-progress until the carrier scans the shipping label. */
+export type DocsPackState = 'in-progress' | 'received'
+
 export interface Leg {
   id: string
   kind: LegKind
@@ -36,6 +42,8 @@ export interface Leg {
   note?: string
   /** Set when the hand-off was logged by a partner carrier app through the Transit Guard API */
   via?: string
+  accept?: AcceptState
+  docsPack?: DocsPackState
 }
 
 export type Direction = 'outbound' | 'rma' | 'internal'
@@ -47,6 +55,7 @@ export interface Shipment {
   unitCount: number
   serialsSample: string[]
   customer: string
+  orderNo?: string
   destination: string
   country: 'US' | 'NL' | 'CA' | 'UK' | 'CH'
   incoterms?: string
@@ -175,6 +184,7 @@ export const SEED_SHIPMENTS: Shipment[] = [
     unitCount: 15,
     serialsSample: ['VE-E2-2201', 'VE-E2-2202', 'VE-E2-2203'],
     customer: 'Meridian Health Europe B.V.',
+    orderNo: 'ORD-88412',
     destination: 'Utrecht, Netherlands',
     country: 'NL',
     incoterms: 'DAP Utrecht',
@@ -204,6 +214,7 @@ export const SEED_SHIPMENTS: Shipment[] = [
     unitCount: 40,
     serialsSample: ['CS-AK-0711', 'CS-AK-0712', 'CS-AK-0713'],
     customer: 'Helvetia BioLogistics AG',
+    orderNo: 'ORD-88433',
     destination: 'Geneva, Switzerland',
     country: 'CH',
     incoterms: 'FOB destination — Geneva',
@@ -217,9 +228,9 @@ export const SEED_SHIPMENTS: Shipment[] = [
       { id: 'C4', kind: 'port', vendor: 'Hudson Gate Marine Terminal (NY)', location: 'Port of New York, NY, USA', date: '2026-12-23', status: 'complete', docs: [{ name: 'Dock Receipt DKR-0466', ready: true }], note: 'Loaded MV Crown Atlantic — reefer hold −2 °C' },
       { id: 'C5', kind: 'ocean', vendor: 'Atlantic Crown Shipping', location: 'Port of Southampton, United Kingdom', date: null, eta: '2027-01-02', status: 'active', via: 'Partner API', docs: [{ name: 'Ocean B/L OBL-3341', ready: true }, { name: 'Temp telemetry feed', ready: true }] },
       { id: 'C6', kind: 'customs', vendor: 'Thames Gate Customs Ltd.', location: 'Southampton Customs, United Kingdom', date: null, eta: '2027-01-03', status: 'pending', docs: [{ name: 'UK Transit Declaration (T1)', ready: true }, { name: 'Perishable Goods Certificate', ready: true }] },
-      { id: 'C7', kind: 'truck', vendor: 'EuroChill Logistics Sp. z o.o.', location: 'Cold hub, Gdansk, Poland', date: null, eta: '2027-01-05', status: 'pending', docs: [{ name: 'CMR Consignment Note', ready: false }], note: 'Dry ice re-charge scheduled — Gdansk cold hub' },
+      { id: 'C7', kind: 'truck', vendor: 'EuroChill Logistics Sp. z o.o.', location: 'Cold hub, Gdansk, Poland', date: null, eta: '2027-01-05', status: 'pending', accept: 'accepted', docsPack: 'in-progress', docs: [{ name: 'CMR Consignment Note', ready: false }], note: 'Dry ice re-charge scheduled — Gdansk cold hub' },
       { id: 'C8', kind: 'customs', vendor: 'Vistula Customs Agency (Gdansk)', location: 'EU entry — Gdansk, Poland', date: null, eta: '2027-01-06', status: 'pending', docs: [{ name: 'EU Import Declaration', ready: false }, { name: 'Sanitary Certificate (EU)', ready: true }] },
-      { id: 'C9', kind: 'truck', vendor: 'EuroChill Logistics Sp. z o.o.', location: 'Geneva, Switzerland', date: null, eta: '2027-01-08', status: 'pending', docs: [{ name: 'CMR Consignment Note', ready: false }] },
+      { id: 'C9', kind: 'truck', vendor: 'EuroChill Logistics Sp. z o.o.', location: 'Geneva, Switzerland', date: null, eta: '2027-01-08', status: 'pending', accept: 'contacting', docs: [{ name: 'CMR Consignment Note', ready: false }] },
       { id: 'C10', kind: 'customs', vendor: 'Helvetia Customs Brokers AG', location: 'Swiss customs, Geneva', date: null, eta: '2027-01-09', status: 'pending', docs: [{ name: 'e-dec Import Declaration', ready: false }, { name: 'Perishable Goods Certificate', ready: true }, { name: 'Cold-Chain Temperature Log', ready: false }] },
       { id: 'C11', kind: 'delivery', vendor: 'Northgate Couriers', location: 'Customer site — Geneva, Switzerland', date: null, eta: '2027-01-10', status: 'pending', docs: [{ name: 'Proof of Delivery + temp acceptance', ready: false }], note: 'FOB destination — revenue recognizes here' },
     ],
@@ -231,6 +242,7 @@ export const SEED_SHIPMENTS: Shipment[] = [
     unitCount: 8,
     serialsSample: ['PO-P4-3312', 'PO-P4-3313', 'PO-P4-3314'],
     customer: 'Aurora Security Co.',
+    orderNo: 'ORD-88421',
     destination: 'Toronto, Canada',
     country: 'CA',
     incoterms: 'FCA Reno',
@@ -248,6 +260,7 @@ export const SEED_SHIPMENTS: Shipment[] = [
     unitCount: 6,
     serialsSample: ['PO-P4-3288', 'PO-P4-3289', 'PO-P4-3290'],
     customer: 'Nordbank Facilities Ltd.',
+    orderNo: 'ORD-88402',
     destination: 'Toronto, Canada',
     country: 'CA',
     incoterms: 'FCA Reno',
@@ -274,6 +287,7 @@ export const SEED_SHIPMENTS: Shipment[] = [
     unitCount: 4,
     serialsSample: ['SW-S1-1104', 'SW-S1-1105'],
     customer: 'Meridian Health Europe B.V.',
+    orderNo: 'ORD-88409',
     destination: 'Utrecht, Netherlands',
     country: 'NL',
     incoterms: 'DAP Utrecht',
@@ -293,6 +307,7 @@ export const SEED_SHIPMENTS: Shipment[] = [
     unitCount: 2,
     serialsSample: ['SW-S1-1071', 'SW-S1-1072'],
     customer: 'Meridian Health Europe B.V.',
+    orderNo: 'ORD-88377',
     destination: 'WH-RNO-2, Reno, NV (return)',
     country: 'NL',
     incoterms: 'Return — seller freight',
@@ -302,7 +317,7 @@ export const SEED_SHIPMENTS: Shipment[] = [
       { id: 'R1', kind: 'courier', vendor: 'Northgate Couriers', location: 'Customer site — Utrecht, Netherlands', date: '2026-12-22', status: 'complete', docs: [{ name: 'RMA Authorization RMA-1043', ready: true }], note: 'Defect confirmed — same TX chain, reversed' },
       { id: 'R2', kind: 'port', vendor: 'Rotterdam Port Services B.V.', location: 'Port of Rotterdam, Netherlands', date: '2026-12-27', status: 'complete', docs: [{ name: 'Export Declaration EXD-2210', ready: true }] },
       { id: 'R3', kind: 'ocean', vendor: 'Atlantic Crown Shipping', location: 'Port of Oakland, CA, USA', date: null, eta: '2027-01-09', status: 'active', docs: [{ name: 'Ocean B/L', ready: false }] },
-      { id: 'R4', kind: 'truck', vendor: 'Cascade Freight Lines', location: 'WH-RNO-2, Reno, NV, USA', date: null, eta: '2027-01-11', status: 'pending', docs: [{ name: 'Return Receipt', ready: false }] },
+      { id: 'R4', kind: 'truck', vendor: 'Redline Haulage Co.', location: 'WH-RNO-2, Reno, NV, USA', date: null, eta: '2027-01-11', status: 'pending', accept: 'accepted', docsPack: 'in-progress', docs: [{ name: 'Return Receipt', ready: false }], note: 'Planned carrier — final leg to warehouse' },
     ],
   },
   {
@@ -582,6 +597,57 @@ export const CUSTOMS_UPDATES: CustomsUpdate[] = [
     title: 'UKCA marking grace period ends Jan 1',
     detail: 'CE-only markings are no longer accepted for security electronics — shipments need the UKCA declaration in the customs pack.',
   },
+]
+
+// ---------------------------------------------------------------------------
+// Carrier add-in (two-profile) demo data — the Uber-style acceptance loop.
+
+export const COMPANY_VENDOR = 'Cascade Freight Lines'
+
+export interface Offer {
+  id: string
+  txId: string
+  vendor: string
+  kind: LegKind
+  summary: string
+  pickup: string
+  payout: number
+  status: 'offered' | 'accepted' | 'declined'
+  from: string
+  to: string
+  special?: string[]
+}
+
+export const SEED_OFFERS: Offer[] = [
+  {
+    id: 'OFF-101', txId: 'TX-20490', vendor: 'Cascade Freight Lines', kind: 'truck',
+    summary: 'Cross-border ground — Reno, NV → Toronto, ON', pickup: '2026-12-30', payout: 1450,
+    status: 'offered', from: 'WH-RNO-2, Reno, NV, USA', to: 'Customer site — Toronto, Canada',
+  },
+  {
+    id: 'OFF-097', txId: 'TX-20481', vendor: 'Cascade Freight Lines', kind: 'truck',
+    summary: 'Drayage — Reno, NV → Harbor Point Boatyard, Oakland', pickup: '2026-12-17', payout: 980,
+    status: 'accepted', from: 'WH-RNO-2, Reno, NV, USA', to: 'Harbor Point Boatyard, Oakland, CA, USA',
+  },
+]
+
+export interface LabelScan {
+  orderNo: string
+  carrier: string
+  txId: string
+  serial: string
+}
+
+/** Scripted shipping-label scans for the company profile. */
+export const LABEL_QUEUE: LabelScan[] = [
+  { orderNo: 'ORD-88421', carrier: 'Cascade Freight Lines', txId: 'TX-20490', serial: 'PO-P4-3312' },
+  { orderNo: 'ORD-88412', carrier: 'Pacific Meridian Lines', txId: 'TX-20481', serial: 'VE-E2-2205' },
+]
+
+/** Scripted shipping-label scans for the carrier profile: a pickup, then a vendor substitution. */
+export const VENDOR_SCAN_QUEUE: { txId: string; orderNo: string; mode: 'pickup' | 'substitute' }[] = [
+  { txId: 'TX-20490', orderNo: 'ORD-88421', mode: 'pickup' },
+  { txId: 'RMA-1043', orderNo: 'ORD-88377', mode: 'substitute' },
 ]
 
 export const PRODUCT_SERIAL_PREFIX: Record<string, string> = {

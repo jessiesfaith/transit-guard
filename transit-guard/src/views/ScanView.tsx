@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useI18n } from '../i18n'
 import { useStore } from '../store'
-import { SCAN_QUEUE, DEMO_TODAY, fmtDate } from '../data/seed'
+import { LABEL_QUEUE, DEMO_TODAY, fmtDate } from '../data/seed'
 
 type Phase = 'idle' | 'scanning' | 'review'
 type Purpose = 'sale' | 'internal' | 'rma'
@@ -13,13 +13,15 @@ export default function ScanView({ onOpenTx }: { onOpenTx: (txId: string) => voi
   const [queueIdx, setQueueIdx] = useState(0)
   const [purpose, setPurpose] = useState<Purpose>('sale')
   const [reason, setReason] = useState('reasonDemo')
+  const [orderNo, setOrderNo] = useState('')
   const [attachTx, setAttachTx] = useState('')
 
-  const current = SCAN_QUEUE[queueIdx % SCAN_QUEUE.length]
+  const current = LABEL_QUEUE[queueIdx % LABEL_QUEUE.length]
   const openSaleTx = state.shipments.filter((s) => s.direction === 'outbound')
 
   function startScan() {
     setPhase('scanning')
+    setOrderNo(current.orderNo)
     setAttachTx(current.txId)
     window.setTimeout(() => setPhase('review'), 1500)
   }
@@ -30,7 +32,7 @@ export default function ScanView({ onOpenTx }: { onOpenTx: (txId: string) => voi
     const tx = purpose === 'internal' ? `TX-INT-${String(4460 + queueIdx)}` : attachTx
     dispatch({
       type: 'LOG_SCAN',
-      scan: { serial: current.serial, product: current.product, txId: tx, purpose: purposeLabel, at: DEMO_TODAY },
+      scan: { serial: current.serial, product: `${orderNo} · ${current.carrier}`, txId: tx, purpose: purposeLabel, at: DEMO_TODAY },
       toast: `${t('loggedToast')} ${tx}`,
     })
     if (purpose === 'sale') {
@@ -55,7 +57,7 @@ export default function ScanView({ onOpenTx }: { onOpenTx: (txId: string) => voi
             className="w-36 h-36 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30 flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform"
           >
             <svg viewBox="0 0 24 24" className="w-10 h-10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10" />
+              <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v5M16 8v8" />
             </svg>
             <span className="font-semibold">{t('scanButton')}</span>
           </button>
@@ -76,12 +78,21 @@ export default function ScanView({ onOpenTx }: { onOpenTx: (txId: string) => voi
       {phase === 'review' && (
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600">{t('scanned')}</span>
-            <span className="font-mono text-sm font-bold text-slate-900">{current.serial}</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600">{t('labelDetected')}</span>
+            <span className="font-mono text-xs font-bold text-slate-900">{current.serial}</span>
           </div>
           <p className="text-xs text-slate-500">
-            {t('product')}: <span className="font-medium text-slate-800">{current.product}</span>
+            {t('carrierLbl')}: <span className="font-medium text-slate-800">{current.carrier}</span>
           </p>
+
+          <div>
+            <label className="text-xs font-semibold text-slate-700 block mb-1">{t('orderNo')}</label>
+            <input
+              value={orderNo}
+              onChange={(e) => setOrderNo(e.target.value)}
+              className="w-full rounded-lg border border-emerald-300 bg-emerald-50/50 text-sm font-mono font-bold text-slate-900 p-2"
+            />
+          </div>
 
           <div className="space-y-2">
             <p className="text-xs font-semibold text-slate-700">{t('purposeQ')}</p>
@@ -116,7 +127,7 @@ export default function ScanView({ onOpenTx }: { onOpenTx: (txId: string) => voi
               <select value={attachTx} onChange={(e) => setAttachTx(e.target.value)} className="w-full rounded-lg border border-slate-300 text-xs p-2 bg-white font-mono">
                 {(purpose === 'rma' ? state.shipments.filter((s) => s.direction === 'rma') : openSaleTx).map((s) => (
                   <option key={s.txId} value={s.txId}>
-                    {s.txId} — {s.customer}
+                    {s.txId} {s.orderNo ? `· ${s.orderNo}` : ''} — {s.customer}
                   </option>
                 ))}
               </select>
