@@ -123,6 +123,7 @@ function Detail({ s, onBack, onOpenTx }: { s: Shipment; onBack: () => void; onOp
   const [location, setLocation] = useState(LOCATIONS[1])
   const [date, setDate] = useState(DEMO_TODAY)
   const [note, setNote] = useState('')
+  const [afterId, setAfterId] = useState('end')
 
   const vendorOptions = VENDORS.filter((v) => v.kinds.includes(kind))
   const rmaExists = state.shipments.some((x) => x.linkedTo === s.txId)
@@ -133,10 +134,12 @@ function Detail({ s, onBack, onOpenTx }: { s: Shipment; onBack: () => void; onOp
       type: 'ADD_LEG',
       txId: s.txId,
       leg: { kind, vendor, location, date, docs: [{ name: 'Hand-off receipt', ready: true }], note: note || undefined },
+      afterLegId: s.legs.some((l) => l.id === afterId) ? afterId : 'end',
       toast: `${t('loggedToast')} ${s.txId}`,
     })
     setShowForm(false)
     setNote('')
+    setAfterId('end')
   }
 
   function startRma() {
@@ -298,7 +301,13 @@ function Detail({ s, onBack, onOpenTx }: { s: Shipment; onBack: () => void; onOp
       )}
 
       {!showForm ? (
-        <button onClick={() => setShowForm(true)} className="w-full rounded-xl bg-emerald-600 text-white text-xs font-bold py-3 shadow-sm">
+        <button
+          onClick={() => {
+            setShowForm(true)
+            setAfterId('end')
+          }}
+          className="w-full rounded-xl bg-emerald-600 text-white text-xs font-bold py-3 shadow-sm"
+        >
           + {t('addLeg')}
         </button>
       ) : (
@@ -306,6 +315,17 @@ function Detail({ s, onBack, onOpenTx }: { s: Shipment; onBack: () => void; onOp
           <div className="flex items-center justify-between">
             <p className="text-xs font-bold text-slate-800">{t('addLeg')}</p>
             <span className="font-mono text-[10px] font-bold text-emerald-700 bg-emerald-100 rounded-full px-2 py-0.5">{s.txId}</span>
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">{t('afterStep')}</label>
+            <select value={afterId} onChange={(e) => setAfterId(e.target.value)} className="w-full rounded-lg border border-slate-300 text-xs p-2 bg-white">
+              <option value="end">{t('endOption')}</option>
+              {s.legs.map((l, i) => (
+                <option key={l.id} value={l.id}>
+                  {i + 1}. {legLabel(l.kind)} — {l.location.split(',')[0]}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">{t('legType')}</label>

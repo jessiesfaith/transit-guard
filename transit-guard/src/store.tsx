@@ -61,7 +61,7 @@ export type Action =
   | { type: 'VENDOR_LABEL_SCAN'; txId: string; vendor: string; mode: 'pickup' | 'substitute'; toast: string }
   | { type: 'APPLY_ROUTE'; payload: ApplyRoutePayload; toast: string }
   | { type: 'LOG_SCAN'; scan: ScanEvent; toast: string }
-  | { type: 'ADD_LEG'; txId: string; leg: Omit<Leg, 'id' | 'status'>; toast: string }
+  | { type: 'ADD_LEG'; txId: string; leg: Omit<Leg, 'id' | 'status'>; afterLegId?: string; toast: string }
   | { type: 'COMPLETE_ACTIVE_LEG'; txId: string; date: string }
   | { type: 'START_RMA'; txId: string; toast: string }
   | { type: 'SET_DOC_READY'; txId: string; legId: string; doc: string; toast?: string }
@@ -303,6 +303,21 @@ function reducer(state: State, action: Action): State {
         toast: action.toast,
         shipments: state.shipments.map((s) => {
           if (s.txId !== action.txId) return s
+          // Explicit insertion point: place the new hand-off right after the chosen step.
+          if (action.afterLegId && action.afterLegId !== 'end') {
+            const at = s.legs.findIndex((l) => l.id === action.afterLegId)
+            if (at >= 0) {
+              const anchorDone = s.legs[at].status === 'complete'
+              const inserted: Leg = {
+                ...action.leg,
+                id: `LX-${s.txId}-${s.legs.length}`,
+                status: anchorDone ? 'complete' : 'pending',
+                date: anchorDone ? action.leg.date : null,
+                eta: anchorDone ? undefined : (action.leg.date ?? undefined),
+              }
+              return { ...s, legs: [...s.legs.slice(0, at + 1), inserted, ...s.legs.slice(at + 1)] }
+            }
+          }
           const idx = s.legs.findIndex((l) => l.status !== 'complete')
           if (idx >= 0 && s.legs[idx].kind === action.leg.kind) {
             // The scanned hand-off matches the next planned leg — complete it in place.
