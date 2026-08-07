@@ -238,7 +238,7 @@ function SidePanels({ children }: { children: React.ReactNode }) {
             <li><b className="text-slate-200">Carrier add-in</b> — switch profile (🚚): accept the AI-proposed load in Offers (Uber-style), then Scan the label — pickup receives the docs pack; the second scan shows a different carrier taking a load and the chain auto-updating.</li>
             <li><b className="text-slate-200">Customs</b> — doc checklist + customs price list vs. sales invoice ($147K vs $186K).</li>
             <li><b className="text-slate-200">Flags</b> — $186K DAP cutoff risk, RMA accrual, Dec-vs-Jan tax timing.</li>
-            <li><b className="text-slate-200">Audit</b> — count snapshot, CSV export, run OCR on the sample doc (ES/FR/EN) and attach it.</li>
+            <li><b className="text-slate-200">Audit</b> — Dec 31 count snapshot ties to the 1,200-unit fleet; one-tap custody-ledger CSV export.</li>
           </ol>
         </div>
       </aside>
