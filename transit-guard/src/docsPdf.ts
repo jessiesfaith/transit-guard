@@ -59,14 +59,23 @@ function sectionTitle(doc: jsPDF, y: number, text: string): void {
   doc.setTextColor(...INK)
 }
 
-export function buildDocsPack(doc: jsPDF, s: Shipment, leg: Leg): jsPDF {
+export function buildDocsPack(doc: jsPDF, s: Shipment, leg: Leg, includeCustoms = true): jsPDF {
   const prod = PRODUCTS[s.product]
   const unitCustoms = prod?.customsUnit ?? 0
   const declared = s.customsValue ?? unitCustoms * s.unitCount
-
-  // ----- Page 1: Customs Valuation Worksheet (company-approved)
-  pageHeader(doc, 'CUSTOMS VALUATION WORKSHEET — COMPANY APPROVED', s)
+  let pageNum = 0
+  const totalPages = includeCustoms ? 4 : 2
+  const startPage = () => {
+    if (pageNum > 0) doc.addPage()
+    pageNum += 1
+  }
   let y = 40
+
+  // ----- Customs valuation worksheet — customs paperwork, only when unlocked
+  if (includeCustoms) {
+  startPage()
+  pageHeader(doc, 'CUSTOMS VALUATION WORKSHEET — COMPANY APPROVED', s)
+  y = 40
   kv(doc, M, y, 'Exporter', 'Fast Insights, Inc. — Reno, NV, USA')
   kv(doc, 115, y, 'Consignee', s.customer)
   y += 16
@@ -118,10 +127,11 @@ export function buildDocsPack(doc: jsPDF, s: Shipment, leg: Leg): jsPDF {
   doc.setFontSize(8.5)
   doc.setTextColor(...SLATE)
   doc.text('J. Dougherty, Controller — Fast Insights, Inc. · Approval on file in Transit Guard', M, y + 5)
-  pageFooter(doc, s, 'Customs Valuation Worksheet · Page 1 of 4')
+  pageFooter(doc, s, `Customs Valuation Worksheet · Page ${pageNum} of ${totalPages}`)
+  }
 
-  // ----- Page 2: Packing Slip
-  doc.addPage()
+  // ----- Packing Slip
+  startPage()
   pageHeader(doc, 'PACKING SLIP', s)
   y = 40
   kv(doc, M, y, 'Ship from', s.legs[0]?.location ?? 'Fast Insights, Reno, NV, USA')
@@ -165,10 +175,10 @@ export function buildDocsPack(doc: jsPDF, s: Shipment, leg: Leg): jsPDF {
     doc.text('Maintain −2 °C. Re-charge dry ice at every hand-off and record the re-icing event in Transit Guard.', M, y)
     doc.setTextColor(...INK)
   }
-  pageFooter(doc, s, 'Packing Slip · Page 2 of 4')
+  pageFooter(doc, s, `Packing Slip · Page ${pageNum} of ${totalPages}`)
 
-  // ----- Page 3: Bill of Lading
-  doc.addPage()
+  // ----- Bill of Lading
+  startPage()
   pageHeader(doc, 'BILL OF LADING', s)
   y = 40
   kv(doc, M, y, 'Shipper', 'Fast Insights, Inc. — Reno, NV, USA')
@@ -201,10 +211,11 @@ export function buildDocsPack(doc: jsPDF, s: Shipment, leg: Leg): jsPDF {
   doc.setFontSize(8.5)
   doc.setTextColor(...SLATE)
   doc.text('Signatures are captured digitally at label scan in the carrier add-in.', M, y + 6)
-  pageFooter(doc, s, 'Bill of Lading · Page 3 of 4')
+  pageFooter(doc, s, `Bill of Lading · Page ${pageNum} of ${totalPages}`)
 
-  // ----- Page 4: Required customs documents checklist
-  doc.addPage()
+  // ----- Required customs documents checklist — customs paperwork, only when unlocked
+  if (includeCustoms) {
+  startPage()
   pageHeader(doc, 'REQUIRED CUSTOMS DOCUMENTS — DESTINATION CHECKLIST', s)
   y = 40
   const reqs = CUSTOMS_REQUIREMENTS[s.country] ?? []
@@ -234,14 +245,15 @@ export function buildDocsPack(doc: jsPDF, s: Shipment, leg: Leg): jsPDF {
     M,
     y,
   )
-  pageFooter(doc, s, 'Customs Checklist · Page 4 of 4')
+  pageFooter(doc, s, `Customs Checklist · Page ${pageNum} of ${totalPages}`)
+  }
   return doc
 }
 
-export function downloadDocsPack(s: Shipment, leg: Leg): void {
+export function downloadDocsPack(s: Shipment, leg: Leg, includeCustoms = true): void {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
-  buildDocsPack(doc, s, leg)
-  doc.save(`${s.txId}_docs_pack.pdf`)
+  buildDocsPack(doc, s, leg, includeCustoms)
+  doc.save(`${s.txId}_${includeCustoms ? 'docs_pack' : 'shipping_docs'}.pdf`)
 }
 
 const INCOTERM_TERMS: [string, string][] = [

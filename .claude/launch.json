@@ -12,6 +12,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "transit-guard"],
       "port": 5174
+    },
+    {
+      "name": "transit-guard-live",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview", "--prefix", "transit-guard"],
+      "port": 4173
     }
   ]
 }

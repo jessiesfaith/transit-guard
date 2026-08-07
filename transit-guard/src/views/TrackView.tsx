@@ -15,7 +15,7 @@ import {
   type Shipment,
   type LegKind,
 } from '../data/seed'
-import { downloadDocsPack } from '../docsPdf'
+import { downloadDocsPack, downloadCustomsPack } from '../docsPdf'
 
 function DirectionBadge({ s }: { s: Shipment }) {
   const { t } = useI18n()
@@ -274,12 +274,21 @@ function Detail({ s, onBack, onOpenTx }: { s: Shipment; onBack: () => void; onOp
                         ✓ {t('acceptedBy')}
                       </span>
                     )}
-                    <button
-                      onClick={() => downloadDocsPack(s, leg)}
-                      className="text-[9px] font-bold rounded-lg bg-slate-900 text-white px-2 py-1"
-                    >
-                      📄 {t('docsPack')}
-                    </button>
+                    {leg.kind === 'customs' ? (
+                      <button
+                        onClick={() => downloadCustomsPack(s)}
+                        className="text-[9px] font-bold rounded-lg bg-emerald-700 text-white px-2 py-1"
+                      >
+                        📄 {t('customsAccess')}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => downloadDocsPack(s, leg, false)}
+                        className="text-[9px] font-bold rounded-lg bg-slate-900 text-white px-2 py-1"
+                      >
+                        📄 {t('shippingDocs')}
+                      </button>
+                    )}
                     {leg.docsPack && (
                       <span className={`text-[9px] font-semibold rounded-full border px-2 py-0.5 ${leg.docsPack === 'received' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-amber-50 border-amber-300 text-amber-700'}`}>
                         {leg.docsPack === 'received' ? `✓ ${t('docsReceived')}` : `… ${t('docsInProgress')}`}

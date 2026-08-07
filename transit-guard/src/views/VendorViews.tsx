@@ -95,10 +95,10 @@ export function JobsView() {
                 {l.docsPack && (
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                     <button
-                      onClick={() => downloadDocsPack(s, l)}
+                      onClick={() => downloadDocsPack(s, l, false)}
                       className="text-[10px] font-bold rounded-lg bg-slate-900 text-white px-2.5 py-1.5"
                     >
-                      📄 {t('docsPack')}
+                      📄 {t('shippingDocs')}
                     </button>
                     <span className={`text-[9px] font-semibold rounded-full border px-2 py-0.5 ${l.docsPack === 'received' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-amber-50 border-amber-300 text-amber-700'}`}>
                       {l.docsPack === 'received' ? `✓ ${t('docsReceived')}` : `… ${t('docsInProgress')}`}
@@ -170,7 +170,9 @@ export function VendorScanView() {
             <div key={i} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 flex items-center justify-between">
               <div>
                 <p className="font-mono text-xs font-bold text-slate-800">{h.orderNo}</p>
-                <p className="text-[10px] text-slate-500">{h.mode === 'substitute' ? '⇄ Vendor auto-updated from label' : '✓ Pickup — docs pack received'}</p>
+                <p className="text-[10px] text-slate-500">
+                  {h.mode === 'substitute' ? '⇄ Vendor auto-updated from label' : '✓ Pickup — docs pack received'}
+                </p>
               </div>
               <p className="font-mono text-[10px] text-indigo-700 font-semibold">{h.txId}</p>
             </div>

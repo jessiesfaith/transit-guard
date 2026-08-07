@@ -5,7 +5,6 @@ import {
   PLAN_DESTINATIONS,
   ROUTE_OPTIONS,
   CUSTOMS_UPDATES,
-  PRODUCTS,
   DEMO_TODAY,
   addDays,
   daysBetween,
@@ -29,8 +28,9 @@ export default function PlanView({ onOpenTx }: { onOpenTx: (txId: string) => voi
   const { state, dispatch } = useStore()
   const [phase, setPhase] = useState<Phase>('form')
   const [country, setCountry] = useState<PlanCountry>('NL')
-  const [product, setProduct] = useState('ValeEdge E2')
-  const [units, setUnits] = useState(8)
+  const [weight, setWeight] = useState(66)
+  const [cartons, setCartons] = useState(2)
+  const [dims, setDims] = useState('60 × 40 × 35 cm')
   const [customer, setCustomer] = useState('Velocity Health Group')
   const [needBy, setNeedBy] = useState('2027-01-12')
   const [strategy, setStrategy] = useState<RouteStrategy>('balanced')
@@ -60,7 +60,7 @@ export default function PlanView({ onOpenTx }: { onOpenTx: (txId: string) => voi
     const txId = nextPlanTxId(state.shipments)
     dispatch({
       type: 'APPLY_ROUTE',
-      payload: { txId, route, country, city: dest.city, product, unitCount: units, customer },
+      payload: { txId, route, country, city: dest.city, product: 'ValeEdge E2', unitCount: Math.max(1, Math.round(weight / 8.2)), customer },
       toast: `${t('routeApplied')} · ${txId}`,
     })
     onOpenTx(txId)
@@ -98,16 +98,21 @@ export default function PlanView({ onOpenTx }: { onOpenTx: (txId: string) => voi
 
       {phase === 'form' && (
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 space-y-2.5">
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">{t('product')}</label>
-              <select value={product} onChange={(e) => setProduct(e.target.value)} className="w-full rounded-lg border border-slate-300 text-xs p-2 bg-white">
-                {Object.keys(PRODUCTS).map((k) => <option key={k} value={k}>{k}</option>)}
-              </select>
-            </div>
-            <div className="w-20">
-              <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">{t('unitsLbl')}</label>
-              <input type="number" min={1} max={99} value={units} onChange={(e) => setUnits(Math.max(1, Number(e.target.value) || 1))} className="w-full rounded-lg border border-slate-300 text-xs p-2 bg-white" />
+          <div>
+            <label className="text-[10px] font-semibold text-slate-600 block mb-1">{t('packageLbl')}</label>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-[9px] text-slate-500 block mb-0.5">{t('weightLbl')}</label>
+                <input type="number" min={1} value={weight} onChange={(e) => setWeight(Math.max(1, Number(e.target.value) || 1))} className="w-full rounded-lg border border-slate-300 text-xs p-2 bg-white" />
+              </div>
+              <div className="w-20">
+                <label className="text-[9px] text-slate-500 block mb-0.5">{t('cartonsLbl')}</label>
+                <input type="number" min={1} value={cartons} onChange={(e) => setCartons(Math.max(1, Number(e.target.value) || 1))} className="w-full rounded-lg border border-slate-300 text-xs p-2 bg-white" />
+              </div>
+              <div className="flex-1">
+                <label className="text-[9px] text-slate-500 block mb-0.5">{t('dimsLbl')}</label>
+                <input value={dims} onChange={(e) => setDims(e.target.value)} className="w-full rounded-lg border border-slate-300 text-xs p-2 bg-white" />
+              </div>
             </div>
           </div>
           <div>
@@ -196,7 +201,7 @@ export default function PlanView({ onOpenTx }: { onOpenTx: (txId: string) => voi
                     </div>
                   ))}
                 </div>
-                {r.memory && <p className="text-[10px] italic text-indigo-700/80">{r.memory} · ~{Math.round(units * 8.2)} kg</p>}
+                {r.memory && <p className="text-[10px] italic text-indigo-700/80">{r.memory} · ~{weight} kg · {cartons} × {dims}</p>}
                 {r.note && <p className="text-[10px] italic text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">{r.note}</p>}
                 <button onClick={() => apply(r)} className="w-full rounded-xl bg-emerald-600 text-white text-xs font-bold py-2.5">
                   {t('applyRoute')} → {t('custodyChain')}
