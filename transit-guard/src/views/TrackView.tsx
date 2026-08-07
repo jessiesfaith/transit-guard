@@ -187,6 +187,35 @@ function Detail({ s, onBack, onOpenTx }: { s: Shipment; onBack: () => void; onOp
 
       {s.country !== 'US' && s.country !== 'CA' && <QrPanel s={s} />}
 
+      {state.approvals
+        .filter((a) => a.txId === s.txId)
+        .map((a) => (
+          <div key={a.id} className="rounded-2xl border-2 border-rose-300 bg-rose-50 p-3.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-rose-800">⚠ {t('approvalTitle')}</p>
+              <span className="text-[9px] font-bold rounded-full bg-rose-200 text-rose-800 px-2 py-0.5">
+                Δ +${a.costDelta} · {a.daysDelta === 0 ? '±0' : `+${a.daysDelta}`} days
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-700 leading-relaxed">{a.detail}</p>
+            <p className="text-[10px] font-semibold text-rose-700">{a.breach}</p>
+            <div className="flex gap-2 pt-0.5">
+              <button
+                onClick={() => dispatch({ type: 'RESOLVE_APPROVAL', approvalId: a.id, approve: false, toast: t('rejectedToast') })}
+                className="flex-1 rounded-xl border border-slate-300 bg-white text-slate-600 text-xs font-semibold py-2"
+              >
+                {t('rejectBtn')}
+              </button>
+              <button
+                onClick={() => dispatch({ type: 'RESOLVE_APPROVAL', approvalId: a.id, approve: true, toast: t('approvedToast') })}
+                className="flex-1 rounded-xl bg-rose-600 text-white text-xs font-bold py-2"
+              >
+                ✓ {t('approveBtn')}
+              </button>
+            </div>
+          </div>
+        ))}
+
       <div>
         <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">{t('custodyChain')}</h3>
         <div className="relative pl-5">

@@ -459,6 +459,8 @@ export interface RouteOption {
   onTime: number
   legs: RouteLeg[]
   note?: string
+  /** What the agent read from vendor memory vs. queried live — no per-order recompute. */
+  memory?: string
 }
 
 export type PlanCountry = 'NL' | 'CA' | 'UK'
@@ -478,7 +480,7 @@ export const PLAN_DESTINATIONS: PlanDestination[] = [
 export const ROUTE_OPTIONS: Record<PlanCountry, RouteOption[]> = {
   NL: [
     {
-      id: 'NL-AIR', name: 'Express Air', strategy: 'fastest', transitDays: 4, cost: 8400, onTime: 98,
+      id: 'NL-AIR', memory: 'Memory: AeroSwift avg $2,140/ton air · owns RNO–AMS lane · queried Dec 30–Jan 1 availability via API', name: 'Express Air', strategy: 'fastest', transitDays: 4, cost: 8400, onTime: 98,
       legs: [
         { kind: 'air', vendor: 'AeroSwift Cargo', location: 'Amsterdam Schiphol, Netherlands', days: 2, rating: 4.8 },
         { kind: 'customs', vendor: 'VanderZee Customs Brokerage B.V.', location: 'Schiphol Customs, Netherlands', days: 1, rating: 4.9 },
@@ -486,7 +488,7 @@ export const ROUTE_OPTIONS: Record<PlanCountry, RouteOption[]> = {
       ],
     },
     {
-      id: 'NL-OCEXP', name: 'Priority Ocean', strategy: 'balanced', transitDays: 14, cost: 3900, onTime: 94,
+      id: 'NL-OCEXP', memory: 'Memory: Pacific Meridian avg $310/ton ocean · owns OAK–RTM lane · queried vessel space Dec 30–Jan 2 via API', name: 'Priority Ocean', strategy: 'balanced', transitDays: 14, cost: 3900, onTime: 94,
       legs: [
         { kind: 'truck', vendor: 'Cascade Freight Lines', location: 'Harbor Point Boatyard, Oakland, CA, USA', days: 1, rating: 4.6 },
         { kind: 'boatyard', vendor: 'Harbor Point Boatyard (Oakland, CA)', location: 'Port of Oakland, CA, USA', days: 1, rating: 4.4 },
@@ -496,7 +498,7 @@ export const ROUTE_OPTIONS: Record<PlanCountry, RouteOption[]> = {
       ],
     },
     {
-      id: 'NL-OCECO', name: 'Economy Ocean', strategy: 'economy', transitDays: 21, cost: 2100, onTime: 88,
+      id: 'NL-OCECO', memory: 'Memory: Atlantic Crown avg $186/ton ocean · serves OAK–RTM · queried vessel space Jan 2–6 via API', name: 'Economy Ocean', strategy: 'economy', transitDays: 21, cost: 2100, onTime: 88,
       note: 'Misses the need-by date if customs slips more than 3 days.',
       legs: [
         { kind: 'truck', vendor: 'Redline Haulage Co.', location: 'Bayside Marine Terminal, Oakland, CA, USA', days: 1, rating: 4.1 },
@@ -509,7 +511,7 @@ export const ROUTE_OPTIONS: Record<PlanCountry, RouteOption[]> = {
   ],
   CA: [
     {
-      id: 'CA-AIR', name: 'Express Air', strategy: 'fastest', transitDays: 3, cost: 2900, onTime: 98,
+      id: 'CA-AIR', memory: 'Memory: AeroSwift avg $1,890/ton air · owns RNO–YYZ lane · queried Dec 30 availability via API', name: 'Express Air', strategy: 'fastest', transitDays: 3, cost: 2900, onTime: 98,
       legs: [
         { kind: 'air', vendor: 'AeroSwift Cargo', location: 'Toronto Pearson, Canada', days: 1, rating: 4.8 },
         { kind: 'customs', vendor: 'Maple Leaf Customs Brokers', location: 'Toronto Pearson, Canada', days: 1, rating: 4.7 },
@@ -517,7 +519,7 @@ export const ROUTE_OPTIONS: Record<PlanCountry, RouteOption[]> = {
       ],
     },
     {
-      id: 'CA-GRND', name: 'Cross-Border Ground', strategy: 'balanced', transitDays: 6, cost: 1450, onTime: 95,
+      id: 'CA-GRND', memory: 'Memory: Cascade avg $412/ton ground · owns Reno–Toronto corridor · queried truck slots Dec 30–31 via API', name: 'Cross-Border Ground', strategy: 'balanced', transitDays: 6, cost: 1450, onTime: 95,
       legs: [
         { kind: 'truck', vendor: 'Cascade Freight Lines', location: 'Peace Bridge, Buffalo NY → Fort Erie ON', days: 4, rating: 4.6 },
         { kind: 'customs', vendor: 'Maple Leaf Customs Brokers', location: 'Fort Erie, Canada', days: 1, rating: 4.7 },
@@ -525,7 +527,7 @@ export const ROUTE_OPTIONS: Record<PlanCountry, RouteOption[]> = {
       ],
     },
     {
-      id: 'CA-LTL', name: 'Economy LTL', strategy: 'economy', transitDays: 9, cost: 780, onTime: 90,
+      id: 'CA-LTL', memory: 'Memory: Redline avg $255/ton LTL · serves Reno–Toronto · queried consolidation space Jan 2 via API', name: 'Economy LTL', strategy: 'economy', transitDays: 9, cost: 780, onTime: 90,
       legs: [
         { kind: 'truck', vendor: 'Redline Haulage Co.', location: 'Peace Bridge, Buffalo NY → Fort Erie ON', days: 7, rating: 4.1 },
         { kind: 'customs', vendor: 'Maple Leaf Customs Brokers', location: 'Fort Erie, Canada', days: 1, rating: 4.7 },
@@ -535,7 +537,7 @@ export const ROUTE_OPTIONS: Record<PlanCountry, RouteOption[]> = {
   ],
   UK: [
     {
-      id: 'UK-AIR', name: 'Express Air', strategy: 'fastest', transitDays: 4, cost: 7900, onTime: 97,
+      id: 'UK-AIR', memory: 'Memory: AeroSwift avg $2,050/ton air · owns RNO–LHR lane · queried Dec 30–Jan 1 availability via API', name: 'Express Air', strategy: 'fastest', transitDays: 4, cost: 7900, onTime: 97,
       legs: [
         { kind: 'air', vendor: 'AeroSwift Cargo', location: 'London Heathrow, United Kingdom', days: 2, rating: 4.8 },
         { kind: 'customs', vendor: 'Thames Gate Customs Ltd.', location: 'Heathrow Customs, United Kingdom', days: 1, rating: 4.5 },
@@ -543,7 +545,7 @@ export const ROUTE_OPTIONS: Record<PlanCountry, RouteOption[]> = {
       ],
     },
     {
-      id: 'UK-OCEXP', name: 'Priority Ocean', strategy: 'balanced', transitDays: 17, cost: 3600, onTime: 92,
+      id: 'UK-OCEXP', memory: 'Memory: Pacific Meridian avg $298/ton ocean · owns OAK–FXT lane · queried vessel space Dec 30–Jan 2 via API', name: 'Priority Ocean', strategy: 'balanced', transitDays: 17, cost: 3600, onTime: 92,
       legs: [
         { kind: 'truck', vendor: 'Cascade Freight Lines', location: 'Harbor Point Boatyard, Oakland, CA, USA', days: 1, rating: 4.6 },
         { kind: 'boatyard', vendor: 'Harbor Point Boatyard (Oakland, CA)', location: 'Port of Oakland, CA, USA', days: 1, rating: 4.4 },
@@ -554,7 +556,7 @@ export const ROUTE_OPTIONS: Record<PlanCountry, RouteOption[]> = {
       ],
     },
     {
-      id: 'UK-OCECO', name: 'Economy Ocean', strategy: 'economy', transitDays: 23, cost: 1950, onTime: 86,
+      id: 'UK-OCECO', memory: 'Memory: Atlantic Crown avg $172/ton ocean · serves OAK–FXT · queried vessel space Jan 3–8 via API', name: 'Economy Ocean', strategy: 'economy', transitDays: 23, cost: 1950, onTime: 86,
       note: 'Tight against most need-by dates — buffer for UKCA document review.',
       legs: [
         { kind: 'truck', vendor: 'Redline Haulage Co.', location: 'Bayside Marine Terminal, Oakland, CA, USA', days: 1, rating: 4.1 },
@@ -648,6 +650,44 @@ export const LABEL_QUEUE: LabelScan[] = [
 export const VENDOR_SCAN_QUEUE: { txId: string; orderNo: string; mode: 'pickup' | 'substitute' }[] = [
   { txId: 'TX-20490', orderNo: 'ORD-88421', mode: 'pickup' },
   { txId: 'RMA-1043', orderNo: 'ORD-88377', mode: 'substitute' },
+]
+
+/**
+ * Agent coordination policy — auto-confirm tolerances for reroutes.
+ * Within ALL limits: the upstream agent re-verifies delivery timing and confirms
+ * automatically. Beyond ANY limit: the sender must approve.
+ */
+export const AGENT_POLICY = {
+  pctLimit: 10, // ±10% cost change
+  usdLimit: 200, // or $200 absolute
+  daysLimit: 2, // or 2-day delivery date change
+}
+
+export interface Approval {
+  id: string
+  txId: string
+  legId: string
+  title: string
+  detail: string
+  altVendor: string
+  costDelta: number
+  daysDelta: number
+  breach: string
+}
+
+export const SEED_APPROVALS: Approval[] = [
+  {
+    id: 'APR-01',
+    txId: 'TX-20499',
+    legId: 'C9',
+    title: 'Reroute exceeds tolerance — sender approval required',
+    detail:
+      'EuroChill truck #2 is unavailable Jan 7 (availability API). Upstream agent matched Alpine Cold Transit AG on the Basel–Geneva lane (vendor memory: avg $438/ton, reefer-certified). Delivery Jan 8 verified unchanged.',
+    altVendor: 'Alpine Cold Transit AG',
+    costDelta: 450,
+    daysDelta: 0,
+    breach: 'Cost Δ +$450 exceeds the $200 auto-confirm limit (±10% / $200 / 2 days)',
+  },
 ]
 
 export const PRODUCT_SERIAL_PREFIX: Record<string, string> = {

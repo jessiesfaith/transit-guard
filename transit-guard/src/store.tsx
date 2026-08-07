@@ -2,6 +2,8 @@ import { createContext, useContext, useReducer, type ReactNode, type Dispatch } 
 import {
   SEED_SHIPMENTS,
   SEED_OFFERS,
+  SEED_APPROVALS,
+  AGENT_POLICY,
   COMPANY_VENDOR,
   VENDORS,
   DEMO_TODAY,
@@ -15,6 +17,7 @@ import {
   type RouteOption,
   type PlanCountry,
   type Offer,
+  type Approval,
 } from './data/seed'
 
 export type Role = 'company' | 'vendor'
@@ -33,6 +36,7 @@ export interface State {
   shipments: Shipment[]
   scans: ScanEvent[]
   offers: Offer[]
+  approvals: Approval[]
   role: Role
   vendorName: string
   toast: string | null
@@ -53,6 +57,7 @@ export type Action =
   | { type: 'ACCEPT_OFFER'; offerId: string; toast: string }
   | { type: 'DECLINE_OFFER'; offerId: string; toast: string }
   | { type: 'REROUTE_ACCEPT'; offerId: string; altVendor: string; toast: string }
+  | { type: 'RESOLVE_APPROVAL'; approvalId: string; approve: boolean; toast: string }
   | { type: 'VENDOR_LABEL_SCAN'; txId: string; vendor: string; mode: 'pickup' | 'substitute'; toast: string }
   | { type: 'APPLY_ROUTE'; payload: ApplyRoutePayload; toast: string }
   | { type: 'LOG_SCAN'; scan: ScanEvent; toast: string }
@@ -188,12 +193,44 @@ function reducer(state: State, action: Action): State {
         accept: 'accepted',
         docsPack: 'in-progress',
         docs: [{ name: 'Hand-off receipt', ready: false }],
-        note: `Rerouted by the agent — ${offer.vendor} declined, ${action.altVendor} accepted (availability match on priority)`,
+        note:
+          `Rerouted by the agent — ${offer.vendor} declined, ${action.altVendor} accepted on availability + weights & measures. ` +
+          `Δ +$70 (+4.8%) · +1 day — within tolerance (±${AGENT_POLICY.pctLimit}% / $${AGENT_POLICY.usdLimit} / ${AGENT_POLICY.daysLimit} days): auto-confirmed, delivery timing verified, sender notified.`,
       }
       return {
         ...state,
         toast: action.toast,
         shipments: state.shipments.map((s) => (s.txId === offer.txId ? { ...s, legs: [...s.legs, reroutedLeg] } : s)),
+      }
+    }
+    case 'RESOLVE_APPROVAL': {
+      const ap = state.approvals.find((a) => a.id === action.approvalId)
+      if (!ap) return state
+      return {
+        ...state,
+        toast: action.toast,
+        approvals: state.approvals.filter((a) => a.id !== action.approvalId),
+        shipments: state.shipments.map((s) => {
+          if (s.txId !== ap.txId) return s
+          return {
+            ...s,
+            legs: s.legs.map((l) => {
+              if (l.id !== ap.legId) return l
+              return action.approve
+                ? {
+                    ...l,
+                    vendor: ap.altVendor,
+                    accept: 'accepted' as const,
+                    note: `Sender approved reroute to ${ap.altVendor} (Δ +$${ap.costDelta}) — delivery timing verified unchanged`,
+                  }
+                : {
+                    ...l,
+                    accept: 'contacting' as const,
+                    note: 'Sender rejected the reroute — upstream agent re-contacting carriers within tolerance',
+                  }
+            }),
+          }
+        }),
       }
     }
     case 'VENDOR_LABEL_SCAN':
@@ -382,6 +419,7 @@ function reducer(state: State, action: Action): State {
 const initialState: State = {
   shipments: SEED_SHIPMENTS,
   offers: SEED_OFFERS,
+  approvals: SEED_APPROVALS,
   role: 'company',
   vendorName: COMPANY_VENDOR,
   scans: [

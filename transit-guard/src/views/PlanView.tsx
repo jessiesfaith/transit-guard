@@ -88,6 +88,15 @@ export default function PlanView({ onOpenTx }: { onOpenTx: (txId: string) => voi
       </div>
 
       {phase === 'form' && (
+        <div className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-3.5 space-y-1.5">
+          <p className="text-xs font-bold text-indigo-900">✦ {t('policyTitle')}</p>
+          <p className="text-[10px] text-slate-600 leading-relaxed">{t('policyMatch')}</p>
+          <p className="text-[10px] text-slate-600 leading-relaxed">{t('policyTolerance')}</p>
+          <p className="text-[10px] text-slate-600 leading-relaxed">{t('policyMemory')}</p>
+        </div>
+      )}
+
+      {phase === 'form' && (
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 space-y-2.5">
           <div className="flex gap-2">
             <div className="flex-1">
@@ -187,6 +196,7 @@ export default function PlanView({ onOpenTx }: { onOpenTx: (txId: string) => voi
                     </div>
                   ))}
                 </div>
+                {r.memory && <p className="text-[10px] italic text-indigo-700/80">{r.memory} · ~{Math.round(units * 8.2)} kg</p>}
                 {r.note && <p className="text-[10px] italic text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">{r.note}</p>}
                 <button onClick={() => apply(r)} className="w-full rounded-xl bg-emerald-600 text-white text-xs font-bold py-2.5">
                   {t('applyRoute')} → {t('custodyChain')}
