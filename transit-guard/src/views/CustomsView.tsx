@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useI18n } from '../i18n'
 import { useStore } from '../store'
 import { CUSTOMS_REQUIREMENTS, PRODUCTS, fmtUsd } from '../data/seed'
+import { downloadCustomsPack } from '../docsPdf'
 
 export default function CustomsView() {
   const { t } = useI18n()
@@ -31,6 +32,10 @@ export default function CustomsView() {
           ))}
         </select>
       </div>
+
+      <button onClick={() => downloadCustomsPack(s)} className="w-full rounded-xl bg-slate-900 text-white text-xs font-bold py-3 shadow-sm">
+        📄 {t('customsPdf')}
+      </button>
 
       {customsLeg ? (
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 space-y-3">

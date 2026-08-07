@@ -243,3 +243,130 @@ export function downloadDocsPack(s: Shipment, leg: Leg): void {
   buildDocsPack(doc, s, leg)
   doc.save(`${s.txId}_docs_pack.pdf`)
 }
+
+const INCOTERM_TERMS: [string, string][] = [
+  ['DAP', 'Delivered At Place — seller bears transport risk to the named destination; revenue recognizes at delivery.'],
+  ['FOB destination', 'Title and risk transfer at the destination on customer acceptance; revenue holds until delivery is proven.'],
+  ['FCA', 'Free Carrier — risk transfers when goods are handed to the buyer’s carrier at origin; revenue at origin hand-off.'],
+]
+
+/**
+ * Customs-only demo pack: valuation & terms page + destination document checklist
+ * with live ready-states from the shipment's customs leg. Clearly marked DEMO ONLY.
+ */
+export function buildCustomsPack(doc: jsPDF, s: Shipment): jsPDF {
+  const prod = PRODUCTS[s.product]
+  const unitCustoms = prod?.customsUnit ?? 0
+  const declared = s.customsValue ?? unitCustoms * s.unitCount
+  const customsLeg = s.legs.find((l) => l.kind === 'customs')
+  const broker = customsLeg?.vendor ?? 'Customs broker — to be assigned'
+
+  // ----- Page 1: valuation & terms
+  pageHeader(doc, 'CUSTOMS VALUATION & TERMS — DEMO ONLY', s)
+  let y = 40
+  kv(doc, M, y, 'Exporter', 'Fast Insights, Inc. — Reno, NV, USA')
+  kv(doc, 115, y, 'Consignee', s.customer)
+  y += 16
+  kv(doc, M, y, 'Destination', s.destination)
+  kv(doc, 115, y, 'Customs broker', broker)
+  y += 16
+  kv(doc, M, y, 'Valuation method', 'Transaction value — company customs price list')
+  kv(doc, 115, y, 'HS code', prod?.hs ?? '—')
+  y += 18
+  sectionTitle(doc, y, 'Declared value computation')
+  y += 7
+  const rows: [string, string][] = [
+    ['Product', s.product],
+    ['Quantity', `${s.unitCount} units`],
+    ['Customs price list / unit', fmtUsd(unitCustoms)],
+    ['Declared customs value', fmtUsd(declared)],
+    ['Sales invoice value (reference)', fmtUsd(s.salesValue)],
+    ['Variance to be documented', fmtUsd(s.salesValue - declared)],
+  ]
+  rows.forEach(([k, v], i) => {
+    const ry = y + i * 8
+    if (i % 2 === 0) {
+      doc.setFillColor(241, 245, 249)
+      doc.rect(M, ry - 5, W - 2 * M, 8, 'F')
+    }
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.text(k, M + 2, ry)
+    doc.setFont('helvetica', 'bold')
+    doc.text(v, W - M - 2, ry, { align: 'right' })
+  })
+  y += rows.length * 8 + 10
+  sectionTitle(doc, y, 'Terms')
+  y += 7
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10.5)
+  doc.text(`Incoterms: ${s.incoterms ?? '—'}`, M, y)
+  y += 6
+  const term = INCOTERM_TERMS.find(([k]) => (s.incoterms ?? '').toUpperCase().includes(k.toUpperCase()))
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.setTextColor(...SLATE)
+  doc.text(
+    doc.splitTextToSize(
+      `${term ? term[1] + ' ' : ''}The declared customs value follows the company customs price list under the transaction-value method; the variance from the sales invoice is expected and documented for the broker and for audit. Demo document — generated from Transit Guard custody events.`,
+      W - 2 * M,
+    ),
+    M,
+    y,
+  )
+  y += 20
+  doc.setTextColor(...INK)
+  doc.setFontSize(10)
+  doc.text('Approved: ____________________________', M, y)
+  doc.setFontSize(8.5)
+  doc.setTextColor(...SLATE)
+  doc.text('J. Dougherty, Controller — Fast Insights, Inc. · Approval on file in Transit Guard', M, y + 5)
+  pageFooter(doc, s, 'Customs Valuation & Terms · Page 1 of 2 · DEMO ONLY')
+
+  // ----- Page 2: destination checklist with live ready-states
+  doc.addPage()
+  pageHeader(doc, 'REQUIRED CUSTOMS DOCUMENTS — DEMO ONLY', s)
+  y = 40
+  const reqs = CUSTOMS_REQUIREMENTS[s.country] ?? []
+  sectionTitle(doc, y, `Destination: ${s.destination}`)
+  y += 9
+  reqs.forEach((r, i) => {
+    const ry = y + i * 15
+    const ready = customsLeg?.docs.find((d) => d.name === r.doc)?.ready ?? false
+    doc.setDrawColor(...EMERALD)
+    doc.rect(M, ry - 4, 5, 5)
+    if (ready) {
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(9)
+      doc.setTextColor(...EMERALD)
+      doc.text('X', M + 1.2, ry)
+    }
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.setTextColor(...INK)
+    doc.text(`${r.doc}${ready ? '  — READY' : '  — PENDING'}`, M + 9, ry)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8.5)
+    doc.setTextColor(...SLATE)
+    doc.text(doc.splitTextToSize(r.desc, W - 2 * M - 9), M + 9, ry + 4.5)
+  })
+  y += reqs.length * 15 + 8
+  doc.setFontSize(9)
+  doc.setTextColor(...SLATE)
+  doc.text(
+    doc.splitTextToSize(
+      `Checklist state is live from ${s.txId}'s customs leg in Transit Guard: the customs stage cannot complete until every document is ready. Requirement changes are monitored by the Transit Guard AI (customs bulletins). Synthetic demo document.`,
+      W - 2 * M,
+    ),
+    M,
+    y,
+  )
+  pageFooter(doc, s, 'Destination Checklist · Page 2 of 2 · DEMO ONLY')
+  return doc
+}
+
+export function downloadCustomsPack(s: Shipment): void {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+  buildCustomsPack(doc, s)
+  doc.save(`${s.txId}_customs_pack_demo.pdf`)
+}
