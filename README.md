@@ -52,11 +52,13 @@ Inventory Close Guard/
 │   ├── PRD.md                                      ← product requirements
 │   ├── SOP.md                                      ← repo operating rules + demo checklist
 │   └── HANDOFF.md                                  ← build handoff and next steps
-└── src/                                            ← app scaffold (planned — not yet scaffolded)
-    └── React + Vite + Tailwind single-page app
+├── index.html                                      ← Vite entry point
+├── vite.config.ts / tsconfig.json / package.json   ← build configuration
+└── src/                                            ← React + Vite + Tailwind single-page app
+    ├── main.tsx / App.tsx                          ← app entry and shell
+    ├── data.ts / types.ts                          ← typed seed-data module
+    └── index.css                                   ← Tailwind entry
 ```
-
-The app itself does not exist yet — this repo currently contains docs and data only. `git init` is a planned next step.
 
 ---
 
@@ -92,14 +94,16 @@ All data is synthetic — see the disclaimer below.
 
 ## Quickstart
 
-> **Planned — available once the Vite app is scaffolded.** The commands below will work after the React + Vite + Tailwind scaffold lands (see [docs/HANDOFF.md](docs/HANDOFF.md)).
+Requires Node 20+.
 
 ```bash
 npm install
 npm run dev
 ```
 
-Then open the local dev URL and hit **Run Inventory Close**. The app has no backend, no API keys, and makes no real AI calls — the seed JSON is imported directly and the run experience is a staged reveal over precomputed data. Navigation: Overview, Inventory, Exceptions, Evidence, Adjustments, Close Package. Final deliverable: the **Fast Insights FY2026 Inventory Close Package** (84% Close Ready).
+The dev server runs at `http://localhost:5173`. `npm run build` type-checks and produces a production bundle in `dist/`.
+
+The app has no backend, no API keys, and makes no real AI calls — the seed JSON is imported directly and the **Run Inventory Close** experience is a staged reveal over precomputed data. Navigation: Overview, Inventory, Exceptions, Evidence, Adjustments, Close Package. Final deliverable: the **Fast Insights FY2026 Inventory Close Package** (84% Close Ready). *Build status: scaffold complete — the currently rendered page is a scaffold-verification shell; the six-section UI is next (see [docs/HANDOFF.md](docs/HANDOFF.md)).*
 
 ---
 

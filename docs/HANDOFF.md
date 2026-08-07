@@ -37,10 +37,11 @@ Supporting references:
 | Kickoff prompt (`Kickoff Prompt.md`) | Analyzed in full |
 | Dataset (seed JSON + XLSX) | Analyzed; structure mapped (see Data Map below) |
 | Doc suite | **Created** — `README.md`, `CLAUDE.md`, `docs/PRD.md`, `docs/SOP.md`, `docs/HANDOFF.md` (this file) |
-| App scaffold | **NOT started** — no `package.json`, no `src/`, nothing to run yet |
-| Git | **NOT a repository** — `git init` is the first queue item |
+| Git | **Initialized** on `main` — commits `9971ae1` (docs + data), `2308c78` (scaffold) |
+| App scaffold | **Complete** — Vite 7 + React 19 + TypeScript (strict) + Tailwind 4 (`@tailwindcss/vite`). `npm run build` passes; scaffold-verification page renders all seed-derived counts correctly at `localhost:5173`. Typed data layer in `src/types.ts` + `src/data.ts` (nullability verified against all 1,200 records). `.claude/launch.json` launches the dev server. |
+| Six-section UI | **NOT started** — current `App.tsx` is a placeholder verification shell |
 
-If you are picking up from here, start at item 1 of the Next-Steps Queue (Section 6).
+If you are picking up from here, start at item 3 of the Next-Steps Queue (Section 6).
 
 ---
 
@@ -133,9 +134,9 @@ Intelligence P&L: naive baseline = 1,200 units / 410K tokens / $1.84 / 1,200 pre
 
 ## 6. Next-Steps Queue (in order)
 
-1. **`git init` + initial commit** of docs and data files.
-2. **Scaffold the app** — Vite + React + TypeScript with Tailwind.
-3. **App shell + navigation** — six sections per PRD: Overview, Inventory, Exceptions, Evidence, Adjustments, Close Package.
+1. ~~**`git init` + initial commit** of docs and data files.~~ ✅ Done 2026-08-07 (`9971ae1`).
+2. ~~**Scaffold the app** — Vite + React + TypeScript with Tailwind.~~ ✅ Done 2026-08-07 (`2308c78`).
+3. **App shell + navigation** — six sections per PRD: Overview, Inventory, Exceptions, Evidence, Adjustments, Close Package. ⟵ **NEXT**
 4. **Overview dashboard** — hero metrics ($3.20M / $94K / 85%) + Intelligence P&L comparison.
 5. **"Run Inventory Close" staged sequence** — scripted processing messages, results reveal, 410K → 63K token animation, "85% Reduction".
 6. **Inventory table** — 1,200 records with tier, risk, and status columns.
@@ -152,6 +153,7 @@ When you finish an item: check it off here, update Current State (Section 3), an
 ## 7. Known Gotchas
 
 - **"Gaurd" spelling in data files.** `inventory_close_gaurd_seed.json` and `fast_insights_inventory_close_gaurd_dataset.xlsx` intentionally keep the kickoff's misspelling. Never "fix" the filenames or JSON keys — imports and references depend on them. All prose and UI say **"Guard"**.
+- **`resolveJsonModule` is deliberately OFF** in `tsconfig.json`. Turning it on would make tsc infer the full literal type of the 1.8 MB seed on every build. `src/json.d.ts` declares `*.json` as `unknown` and `src/data.ts` casts to `SeedData` — keep this pattern.
 - **Seed JSON is 1.8 MB.** Import it in code; do **not** read the whole file into a Claude context window. When you need to inspect structure, sample a few records (e.g. with a small Node/PowerShell snippet or `Read` with tight offsets) rather than reading the file end to end.
 - **closePackage has 13 rows; the kickoff names 14 sections.** Verified against the seed: the missing 14th row is **AI Usage Ledger** (Controller Approval Log *is* present, status "Waiting on Evidence"). When building the Close Package view, render AI Usage Ledger as a derived section from the `tokenLedger` array (92 rows), per PRD §9.
 - **Close Package label mismatch.** The seed names one row `Inventory-to-GL Reconciliation` while the kickoff (and PRD) call it "Inventory Subledger-to-GL Reconciliation". The Close Package view must map the seed label to the kickoff display name.

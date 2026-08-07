@@ -39,4 +39,4 @@ The materiality-aware year-end inventory close agent — a hackathon demo SPA fo
 
 ## Current status
 
-Docs complete; app not yet scaffolded; repo not yet under git (git init is a planned next step).
+Docs complete. Git initialized on `main`. Scaffold complete (Vite 7 + React 19 + strict TS + Tailwind 4; typed seed import verified in browser; `npm run dev` → localhost:5173). Next: six-section app shell — see docs/HANDOFF.md queue.
